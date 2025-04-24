@@ -4,9 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
 import { useCategoryStore } from '@/stores/category'
 import { useFileStore } from '@/stores/file'
-import { useSearchStore } from '@/stores/search'
 import { ElLoading, ElMessage, ElPagination, ElEmpty, ElSkeleton } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
 
 // 获取路由参数和存储
 const route = useRoute()
@@ -14,7 +12,6 @@ const router = useRouter()
 const productStore = useProductStore()
 const categoryStore = useCategoryStore()
 const fileStore = useFileStore()
-const searchStore = useSearchStore()
 
 // 状态
 const loading = ref(false)
@@ -24,9 +21,8 @@ const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(24)
 
-// 搜索和筛选条件
+// 筛选条件
 const search = ref({
-  keyword: '',
   categoryId: null,
   minPrice: null,
   maxPrice: null,
@@ -47,7 +43,6 @@ const loadProducts = async () => {
       page: currentPage.value,
       size: pageSize.value,
       categoryId: search.value.categoryId,
-      keyword: search.value.keyword,
       minPrice: search.value.minPrice,
       maxPrice: search.value.maxPrice,
     }
@@ -68,11 +63,6 @@ const loadProducts = async () => {
     
     products.value = result.records || []
     total.value = result.total || 0
-    
-    // 如果是搜索，记录搜索历史
-    if (search.value.keyword) {
-      searchStore.addSearchHistory(search.value.keyword)
-    }
   } catch (error) {
     console.error('获取商品列表失败', error)
     ElMessage.error('获取商品列表失败，请刷新页面重试')
@@ -83,9 +73,6 @@ const loadProducts = async () => {
 
 // 监听路由参数变化
 watch(() => route.query, (newQuery) => {
-  if (newQuery.keyword) {
-    search.value.keyword = newQuery.keyword
-  }
   if (newQuery.categoryId) {
     search.value.categoryId = Number(newQuery.categoryId)
   }
@@ -103,10 +90,7 @@ onMounted(async () => {
     console.error('获取分类列表失败', error)
   }
   
-  // 从路由获取搜索关键词和分类ID
-  if (route.query.keyword) {
-    search.value.keyword = route.query.keyword
-  }
+  // 从路由获取分类ID
   if (route.query.categoryId) {
     search.value.categoryId = Number(route.query.categoryId)
   }
@@ -114,22 +98,6 @@ onMounted(async () => {
   // 加载商品
   loadProducts()
 })
-
-// 搜索商品
-const searchProducts = () => {
-  currentPage.value = 1
-  
-  // 更新URL参数
-  router.push({
-    path: '/products',
-    query: {
-      keyword: search.value.keyword || undefined,
-      categoryId: search.value.categoryId || undefined
-    }
-  })
-  
-  loadProducts()
-}
 
 // 筛选分类
 const filterByCategory = (categoryId) => {
@@ -140,7 +108,6 @@ const filterByCategory = (categoryId) => {
   router.push({
     path: '/products',
     query: {
-      keyword: search.value.keyword || undefined,
       categoryId: search.value.categoryId || undefined
     }
   })
@@ -151,7 +118,6 @@ const filterByCategory = (categoryId) => {
 // 清除筛选条件
 const clearFilters = () => {
   search.value = {
-    keyword: search.value.keyword, // 保留搜索关键词
     categoryId: null,
     minPrice: null,
     maxPrice: null,
@@ -198,29 +164,11 @@ const getImageUrl = (imageUrl) => {
 
 <template>
   <div class="product-list-page">
-    <!-- 搜索框 -->
-    <div class="search-container">
-      <div class="search-box">
-        <el-input
-          v-model="search.keyword"
-          placeholder="搜索商品"
-          clearable
-          @keyup.enter="searchProducts"
-        >
-          <template #suffix>
-            <el-button :icon="Search" @click="searchProducts" />
-          </template>
-        </el-input>
-      </div>
-    </div>
-    
     <!-- 头部信息 -->
     <div class="page-header">
-      <h1 class="page-title">
-        {{ search.keyword ? `搜索"${search.keyword}"的结果` : '商品列表' }}
-      </h1>
+      <h1 class="page-title">商品列表</h1>
       <p class="result-info" v-if="hasProducts">
-        找到 <span class="highlight">{{ total }}</span> 件相关商品
+        共 <span class="highlight">{{ total }}</span> 件商品
       </p>
     </div>
     
@@ -246,28 +194,28 @@ const getImageUrl = (imageUrl) => {
         <span 
           class="sort-option" 
           :class="{ active: search.sortBy === 'default' }"
-          @click="search.sortBy = 'default'; searchProducts()"
+          @click="search.sortBy = 'default'; loadProducts()"
         >
           默认排序
         </span>
         <span 
           class="sort-option" 
           :class="{ active: search.sortBy === 'price-asc' }"
-          @click="search.sortBy = 'price-asc'; searchProducts()"
+          @click="search.sortBy = 'price-asc'; loadProducts()"
         >
           价格 ↑
         </span>
         <span 
           class="sort-option" 
           :class="{ active: search.sortBy === 'price-desc' }"
-          @click="search.sortBy = 'price-desc'; searchProducts()"
+          @click="search.sortBy = 'price-desc'; loadProducts()"
         >
           价格 ↓
         </span>
         <span 
           class="sort-option" 
           :class="{ active: search.sortBy === 'sales' }"
-          @click="search.sortBy = 'sales'; searchProducts()"
+          @click="search.sortBy = 'sales'; loadProducts()"
         >
           销量优先
         </span>
@@ -288,7 +236,7 @@ const getImageUrl = (imageUrl) => {
           size="small"
           style="width: 100px;"
         />
-        <el-button size="small" @click="searchProducts">筛选</el-button>
+        <el-button size="small" @click="loadProducts">筛选</el-button>
         <el-button size="small" @click="clearFilters">重置</el-button>
       </div>
     </div>
@@ -300,7 +248,7 @@ const getImageUrl = (imageUrl) => {
     
     <!-- 商品为空 -->
     <div v-else-if="!hasProducts" class="empty-container">
-      <el-empty :description="search.keyword ? `没有找到与'${search.keyword}'相关的商品` : '暂无商品'" />
+      <el-empty description="暂无商品" />
     </div>
     
     <!-- 商品列表 -->
@@ -354,15 +302,6 @@ const getImageUrl = (imageUrl) => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
-}
-
-.search-container {
-  margin-bottom: 20px;
-}
-
-.search-box {
-  max-width: 600px;
-  margin: 0 auto;
 }
 
 .page-header {

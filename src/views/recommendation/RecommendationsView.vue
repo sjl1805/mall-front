@@ -4,7 +4,7 @@ import { useRecommendationStore } from '@/stores/recommendation'
 import { useUserStore } from '@/stores/user'
 import { useFileStore } from '@/stores/file'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElTabs, ElTabPane, ElButton, ElSkeleton, ElEmpty, ElBacktop } from 'element-plus'
+import { ElMessage, ElButton, ElSkeleton, ElEmpty, ElBacktop } from 'element-plus'
 
 // 获取推荐、用户和文件存储
 const recommendationStore = useRecommendationStore()
@@ -13,118 +13,40 @@ const fileStore = useFileStore()
 const router = useRouter()
 
 // 状态
-const loading = ref({
-  hybrid: false,
-  userCF: false,
-  itemCF: false,
-  popular: false,
-  contentBased: false
-})
-const activeTab = ref('hybrid')
-
-// 每种类型的推荐商品
-const recommendations = ref({
-  hybrid: [],
-  userCF: [],
-  itemCF: [],
-  popular: [],
-  contentBased: []
-})
-
-// 推荐标题映射
-const recommendationTitles = {
-  hybrid: '综合推荐',
-  userCF: '猜你喜欢',
-  itemCF: '相似推荐',
-  popular: '热门推荐',
-  contentBased: '个性化推荐'
-}
-
-// 推荐描述映射
-const recommendationDescs = {
-  hybrid: '根据您的浏览和购买习惯，为您精选的商品',
-  userCF: '喜欢相似商品的用户也购买了这些',
-  itemCF: '与您浏览商品相似的推荐',
-  popular: '大家都在关注的热门商品',
-  contentBased: '基于您的偏好特征推荐'
-}
-
-// 计算属性：是否已登录
-const isLoggedIn = computed(() => userStore.isLoggedIn)
-
-// 处理标签页切换
-const handleTabChange = (tab) => {
-  loadTabData(tab)
-}
-
-// 加载标签页数据
-const loadTabData = async (tabName) => {
-  if (loading.value[tabName]) return; // 防止重复加载
-  
-  if (recommendations.value[tabName].length > 0 && !forceRefresh.value) {
-    return // 已有数据，不重复加载
-  }
-
-  loading.value[tabName] = true
-
-  try {
-    let data = []
-    
-    switch (tabName) {
-      case 'hybrid':
-        data = await recommendationStore.getRecommendations(pageSize.value, forceRefresh.value)
-        break
-      case 'userCF':
-        data = await recommendationStore.getUserCFRecommendations(pageSize.value, forceRefresh.value)
-        break
-      case 'itemCF':
-        data = await recommendationStore.getItemCFRecommendations(pageSize.value, forceRefresh.value)
-        break
-      case 'popular':
-        data = await recommendationStore.getPopularRecommendations(pageSize.value, forceRefresh.value)
-        break
-      case 'contentBased':
-        data = await recommendationStore.getContentBasedRecommendations(pageSize.value, forceRefresh.value)
-        break
-    }
-    
-    recommendations.value[tabName] = data
-    forceRefresh.value = false
-  } catch (error) {
-    console.error(`加载${recommendationTitles[tabName]}失败`, error)
-    ElMessage.error(`加载${recommendationTitles[tabName]}失败，请稍后重试`)
-  } finally {
-    loading.value[tabName] = false
-  }
-}
+const loading = ref(false)
+const recommendations = ref([])
 
 // 每页显示的商品数量
 const pageSize = ref(24)
 // 是否强制刷新数据
 const forceRefresh = ref(false)
 
-// 加载所有推荐数据
-const loadAllRecommendations = async () => {
-  if (isLoggedIn.value) {
-    // 已登录用户加载个性化推荐
-    await loadTabData('hybrid')
-    
-    // 预加载热门推荐（作为后备）
-    loadTabData('popular')
-  } else {
-    // 未登录用户只加载热门推荐
-    recommendations.value.hybrid = []
-    activeTab.value = 'popular'
-    await loadTabData('popular')
-    
-    ElMessage.warning('登录后可查看更多个性化推荐')
+// 加载推荐数据
+const loadRecommendations = async () => {
+  if (loading.value) return; // 防止重复加载
+  
+  if (recommendations.value.length > 0 && !forceRefresh.value) {
+    return // 已有数据，不重复加载
+  }
+
+  loading.value = true
+
+  try {
+    const data = await recommendationStore.getRecommendations(pageSize.value, forceRefresh.value)
+    recommendations.value = data
+    forceRefresh.value = false
+  } catch (error) {
+    console.error('加载推荐商品失败', error)
+    ElMessage.error('加载推荐商品失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
 }
 
 // 刷新数据
 const refreshData = () => {
   forceRefresh.value = true
-  loadTabData(activeTab.value)
+  loadRecommendations()
 }
 
 // 格式化价格
@@ -170,18 +92,21 @@ const goToLogin = () => {
   })
 }
 
+// 计算属性：是否已登录
+const isLoggedIn = computed(() => userStore.isLoggedIn)
+
 // 监听登录状态变化
 watch(() => userStore.isLoggedIn, (newValue, oldValue) => {
   if (newValue && !oldValue) {
     // 用户刚登录，刷新推荐数据
     forceRefresh.value = true
-    loadAllRecommendations()
+    loadRecommendations()
   }
 })
 
 // 页面挂载时加载数据
 onMounted(() => {
-  loadAllRecommendations()
+  loadRecommendations()
 })
 </script>
 
@@ -198,220 +123,51 @@ onMounted(() => {
       
       <div class="action-buttons">
         <el-button v-if="!isLoggedIn" type="primary" @click="goToLogin">立即登录</el-button>
-        <el-button @click="refreshData" :loading="loading[activeTab]" :disabled="loading[activeTab]">
+        <el-button @click="refreshData" :loading="loading" :disabled="loading">
           <i class="el-icon-refresh"></i> 刷新推荐
         </el-button>
       </div>
     </div>
 
     <div class="recommendation-container">
-      <el-tabs v-model="activeTab" @tab-click="handleTabChange" class="recommendation-tabs">
-        <el-tab-pane v-if="isLoggedIn" label="综合推荐" name="hybrid">
-          <div class="tab-content-container">
-            <div class="tab-header">
-              <h2>{{ recommendationTitles.hybrid }}</h2>
-              <p>{{ recommendationDescs.hybrid }}</p>
+      <div class="tab-content-container">
+        <div class="tab-header">
+          <h2>综合推荐</h2>
+          <p>根据您的浏览和购买习惯，为您精选的商品</p>
+        </div>
+        
+        <div v-if="loading" class="loading-container">
+          <el-skeleton :rows="5" animated />
+        </div>
+        
+        <div v-else-if="recommendations.length === 0" class="empty-container">
+          <el-empty description="暂无推荐商品，请稍后再来" />
+        </div>
+        
+        <div v-else class="products-grid">
+          <div 
+            v-for="product in recommendations" 
+            :key="product.id" 
+            class="product-card"
+            @click="goToProductDetail(product.id)"
+          >
+            <div class="product-img">
+              <img :src="getImageUrl(product.mainImage || product.image)" :alt="product.name">
+              <div v-if="calculateDiscount(product.price, product.originalPrice)" class="discount-tag">
+                {{ calculateDiscount(product.price, product.originalPrice) }}
+              </div>
             </div>
-            
-            <div v-if="loading.hybrid" class="loading-container">
-              <el-skeleton :rows="5" animated />
-            </div>
-            
-            <div v-else-if="recommendations.hybrid.length === 0" class="empty-container">
-              <el-empty description="暂无推荐商品，请稍后再来" />
-            </div>
-            
-            <div v-else class="products-grid">
-              <div 
-                v-for="product in recommendations.hybrid" 
-                :key="product.id" 
-                class="product-card"
-                @click="goToProductDetail(product.id)"
-              >
-                <div class="product-img">
-                  <img :src="getImageUrl(product.mainImage || product.image)" :alt="product.name">
-                  <div v-if="calculateDiscount(product.price, product.originalPrice)" class="discount-tag">
-                    {{ calculateDiscount(product.price, product.originalPrice) }}
-                  </div>
-                </div>
-                <div class="product-info">
-                  <h3 class="product-name">{{ product.name }}</h3>
-                  <p class="product-brief">{{ product.brief || product.subtitle }}</p>
-                  <div class="product-price" v-html="formatPrice(product.price, product.originalPrice)"></div>
-                  <div class="product-sales" v-if="product.sales">
-                    <span>销量: {{ product.sales }}</span>
-                  </div>
-                </div>
+            <div class="product-info">
+              <h3 class="product-name">{{ product.name }}</h3>
+              <p class="product-brief">{{ product.brief || product.subtitle }}</p>
+              <div class="product-price" v-html="formatPrice(product.price, product.originalPrice)"></div>
+              <div class="product-sales" v-if="product.sales">
+                <span>销量: {{ product.sales }}</span>
               </div>
             </div>
           </div>
-        </el-tab-pane>
-
-        <el-tab-pane v-if="isLoggedIn" label="猜你喜欢" name="userCF">
-          <div class="tab-content-container">
-            <div class="tab-header">
-              <h2>{{ recommendationTitles.userCF }}</h2>
-              <p>{{ recommendationDescs.userCF }}</p>
-            </div>
-            
-            <div v-if="loading.userCF" class="loading-container">
-              <el-skeleton :rows="5" animated />
-            </div>
-            
-            <div v-else-if="recommendations.userCF.length === 0" class="empty-container">
-              <el-empty description="暂无推荐商品，请稍后再来" />
-            </div>
-            
-            <div v-else class="products-grid">
-              <div 
-                v-for="product in recommendations.userCF" 
-                :key="product.id" 
-                class="product-card"
-                @click="goToProductDetail(product.id)"
-              >
-                <div class="product-img">
-                  <img :src="getImageUrl(product.mainImage || product.image)" :alt="product.name">
-                  <div v-if="calculateDiscount(product.price, product.originalPrice)" class="discount-tag">
-                    {{ calculateDiscount(product.price, product.originalPrice) }}
-                  </div>
-                </div>
-                <div class="product-info">
-                  <h3 class="product-name">{{ product.name }}</h3>
-                  <p class="product-brief">{{ product.brief || product.subtitle }}</p>
-                  <div class="product-price" v-html="formatPrice(product.price, product.originalPrice)"></div>
-                  <div class="product-sales" v-if="product.sales">
-                    <span>销量: {{ product.sales }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-tab-pane>
-
-        <el-tab-pane v-if="isLoggedIn" label="相似推荐" name="itemCF">
-          <div class="tab-content-container">
-            <div class="tab-header">
-              <h2>{{ recommendationTitles.itemCF }}</h2>
-              <p>{{ recommendationDescs.itemCF }}</p>
-            </div>
-            
-            <div v-if="loading.itemCF" class="loading-container">
-              <el-skeleton :rows="5" animated />
-            </div>
-            
-            <div v-else-if="recommendations.itemCF.length === 0" class="empty-container">
-              <el-empty description="暂无推荐商品，请稍后再来" />
-            </div>
-            
-            <div v-else class="products-grid">
-              <div 
-                v-for="product in recommendations.itemCF" 
-                :key="product.id" 
-                class="product-card"
-                @click="goToProductDetail(product.id)"
-              >
-                <div class="product-img">
-                  <img :src="getImageUrl(product.mainImage || product.image)" :alt="product.name">
-                  <div v-if="calculateDiscount(product.price, product.originalPrice)" class="discount-tag">
-                    {{ calculateDiscount(product.price, product.originalPrice) }}
-                  </div>
-                </div>
-                <div class="product-info">
-                  <h3 class="product-name">{{ product.name }}</h3>
-                  <p class="product-brief">{{ product.brief || product.subtitle }}</p>
-                  <div class="product-price" v-html="formatPrice(product.price, product.originalPrice)"></div>
-                  <div class="product-sales" v-if="product.sales">
-                    <span>销量: {{ product.sales }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-tab-pane>
-
-        <el-tab-pane label="热门推荐" name="popular">
-          <div class="tab-content-container">
-            <div class="tab-header">
-              <h2>{{ recommendationTitles.popular }}</h2>
-              <p>{{ recommendationDescs.popular }}</p>
-            </div>
-            
-            <div v-if="loading.popular" class="loading-container">
-              <el-skeleton :rows="5" animated />
-            </div>
-            
-            <div v-else-if="recommendations.popular.length === 0" class="empty-container">
-              <el-empty description="暂无推荐商品，请稍后再来" />
-            </div>
-            
-            <div v-else class="products-grid">
-              <div 
-                v-for="product in recommendations.popular" 
-                :key="product.id" 
-                class="product-card"
-                @click="goToProductDetail(product.id)"
-              >
-                <div class="product-img">
-                  <img :src="getImageUrl(product.mainImage || product.image)" :alt="product.name">
-                  <div v-if="calculateDiscount(product.price, product.originalPrice)" class="discount-tag">
-                    {{ calculateDiscount(product.price, product.originalPrice) }}
-                  </div>
-                  <div class="hot-tag">热门</div>
-                </div>
-                <div class="product-info">
-                  <h3 class="product-name">{{ product.name }}</h3>
-                  <p class="product-brief">{{ product.brief || product.subtitle }}</p>
-                  <div class="product-price" v-html="formatPrice(product.price, product.originalPrice)"></div>
-                  <div class="product-sales" v-if="product.sales">
-                    <span>销量: {{ product.sales }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-tab-pane>
-
-        <el-tab-pane v-if="isLoggedIn" label="个性化推荐" name="contentBased">
-          <div class="tab-content-container">
-            <div class="tab-header">
-              <h2>{{ recommendationTitles.contentBased }}</h2>
-              <p>{{ recommendationDescs.contentBased }}</p>
-            </div>
-            
-            <div v-if="loading.contentBased" class="loading-container">
-              <el-skeleton :rows="5" animated />
-            </div>
-            
-            <div v-else-if="recommendations.contentBased.length === 0" class="empty-container">
-              <el-empty description="暂无推荐商品，请稍后再来" />
-            </div>
-            
-            <div v-else class="products-grid">
-              <div 
-                v-for="product in recommendations.contentBased" 
-                :key="product.id" 
-                class="product-card"
-                @click="goToProductDetail(product.id)"
-              >
-                <div class="product-img">
-                  <img :src="getImageUrl(product.mainImage || product.image)" :alt="product.name">
-                  <div v-if="calculateDiscount(product.price, product.originalPrice)" class="discount-tag">
-                    {{ calculateDiscount(product.price, product.originalPrice) }}
-                  </div>
-                </div>
-                <div class="product-info">
-                  <h3 class="product-name">{{ product.name }}</h3>
-                  <p class="product-brief">{{ product.brief || product.subtitle }}</p>
-                  <div class="product-price" v-html="formatPrice(product.price, product.originalPrice)"></div>
-                  <div class="product-sales" v-if="product.sales">
-                    <span>销量: {{ product.sales }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-tab-pane>
-      </el-tabs>
+        </div>
+      </div>
     </div>
     
     <el-backtop :right="20" :bottom="20"></el-backtop>
@@ -455,10 +211,6 @@ onMounted(() => {
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   padding: 20px;
-}
-
-.recommendation-tabs {
-  width: 100%;
 }
 
 .tab-content-container {
@@ -533,18 +285,6 @@ onMounted(() => {
   top: 10px;
   right: 10px;
   background-color: #ff4d4f;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-}
-
-.hot-tag {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  background-color: #ff7a45;
   color: white;
   padding: 2px 8px;
   border-radius: 12px;

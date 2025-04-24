@@ -3,23 +3,6 @@ import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
-// 获取用户store
-const userStore = useUserStore()
-
-// 应用初始化时自动检查用户登录状态
-onMounted(async () => {
-  // 如果已有token但没有用户信息，则获取用户信息
-  if (userStore.token && !userStore.userId) {
-    try {
-      await userStore.getUserInfo()
-      console.log('已自动恢复用户登录状态')
-    } catch (error) {
-      console.error('恢复用户登录状态失败', error)
-      // 如果获取用户信息失败，清除过期的token
-      userStore.clearUserInfo()
-    }
-  }
-})
 </script>
 
 <template>

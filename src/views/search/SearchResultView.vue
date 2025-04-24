@@ -235,8 +235,8 @@ const formatPrice = (price, originalPrice) => {
 // 计算折扣
 const calculateDiscount = (price, originalPrice) => {
   if (originalPrice && originalPrice > price) {
-    const discount = Math.round((1 - price / originalPrice) * 100)
-    return discount >= 5 ? `${discount}折` : ''
+    const discount = Math.round((price / originalPrice) * 10)
+    return discount < 10 ? `${discount}折` : ''
   }
   return ''
 }

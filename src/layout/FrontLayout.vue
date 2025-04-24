@@ -153,9 +153,6 @@ const getAvatarUrl = (avatarPath) => {
                   <el-dropdown-item @click="goToFavorites">
                     <el-icon><star /></el-icon> 我的收藏
                   </el-dropdown-item>
-                  <el-dropdown-item v-if="userStore.isAdmin" divided @click="goToAdmin">
-                    <el-icon><setting /></el-icon> 后台管理
-                  </el-dropdown-item>
                   <el-dropdown-item divided @click="handleLogout">
                     <el-icon><switch-button /></el-icon> 退出登录
                   </el-dropdown-item>
@@ -176,29 +173,6 @@ const getAvatarUrl = (avatarPath) => {
               <el-icon><setting /></el-icon> 后台管理
             </a>
           </template>
-          <span class="divider">|</span>
-          <el-dropdown trigger="hover">
-            <span class="customer-service">
-              客户服务 <el-icon><arrow-down /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="router.push('/help')">
-                  <el-icon><message /></el-icon> 帮助中心
-                </el-dropdown-item>
-                <el-dropdown-item>
-                  <el-icon><service /></el-icon> 在线客服
-                </el-dropdown-item>
-                <el-dropdown-item>
-                  <el-icon><phone /></el-icon> 联系电话
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-          <span class="divider">|</span>
-          <a @click="router.push('/download')">
-            <el-icon><iphone /></el-icon> 下载APP
-          </a>
         </div>
       </div>
     </div>
