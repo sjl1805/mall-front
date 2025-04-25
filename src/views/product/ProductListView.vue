@@ -160,6 +160,23 @@ const calculateDiscount = (price, originalPrice) => {
 const getImageUrl = (imageUrl) => {
   return fileStore.getPreviewUrl(imageUrl)
 }
+
+// 新增状态
+const selectedParentCategory = ref(null) // 选中的父分类
+const subCategories = ref([]) // 子分类列表
+
+// 新增方法：处理父分类点击
+const handleParentCategoryClick = async (category) => {
+  if (selectedParentCategory.value === category.id) {
+    selectedParentCategory.value = null
+    subCategories.value = []
+  } else {
+    selectedParentCategory.value = category.id
+    // 获取子分类
+    const children = await categoryStore.fetchChildCategories(category.id)
+    subCategories.value = children
+  }
+}
 </script>
 
 <template>
@@ -176,14 +193,43 @@ const getImageUrl = (imageUrl) => {
     <div v-if="hasCategories" class="category-filter">
       <div class="filter-header">商品分类</div>
       <div class="category-list">
+        <!-- 父分类列表 -->
         <div 
           v-for="cat in categories" 
           :key="cat.id" 
-          class="category-item"
-          :class="{ active: search.categoryId === cat.id }"
-          @click="filterByCategory(cat.id)"
+          class="category-item parent-category"
+          :class="{ 
+            active: selectedParentCategory === cat.id,
+            selected: search.categoryId === cat.id 
+          }"
+          @click="handleParentCategoryClick(cat)"
         >
-          {{ cat.name }}
+          <img 
+            v-if="cat.icon" 
+            :src="getImageUrl(cat.icon)" 
+            class="category-icon" 
+            :alt="cat.name"
+          >
+          <span class="category-name">{{ cat.name }}</span>
+        </div>
+      </div>
+      
+      <!-- 子分类列表 -->
+      <div v-if="subCategories.length" class="sub-category-list">
+        <div 
+          v-for="subCat in subCategories" 
+          :key="subCat.id" 
+          class="category-item sub-category"
+          :class="{ active: search.categoryId === subCat.id }"
+          @click="filterByCategory(subCat.id)"
+        >
+          <img 
+            v-if="subCat.icon" 
+            :src="getImageUrl(subCat.icon)" 
+            class="category-icon" 
+            :alt="subCat.name"
+          >
+          <span class="category-name">{{ subCat.name }}</span>
         </div>
       </div>
     </div>
@@ -345,23 +391,67 @@ const getImageUrl = (imageUrl) => {
 .category-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 15px;
+  margin-bottom: 15px;
 }
 
 .category-item {
-  padding: 6px 12px;
-  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
   background-color: #f5f5f5;
-  font-size: 14px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
-.category-item:hover {
+.category-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.category-name {
+  font-size: 14px;
+}
+
+.parent-category {
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+}
+
+.parent-category:hover {
+  border-color: #ff6700;
+  color: #ff6700;
+}
+
+.parent-category.active {
+  background-color: #ff6700;
+  color: white;
+  border-color: #ff6700;
+}
+
+.sub-category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px dashed #e0e0e0;
+}
+
+.sub-category {
+  background-color: #f5f5f5;
+  font-size: 13px;
+}
+
+.sub-category:hover {
   background-color: #e5e5e5;
 }
 
-.category-item.active {
+.sub-category.active {
   background-color: #ff6700;
   color: white;
 }

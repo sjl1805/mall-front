@@ -582,6 +582,18 @@ export function batchUpdateProductStatus(productIds, status) {
 // ==================== 推荐管理 ====================
 
 /**
+ * 更新所有用户偏好
+ * 这是一个耗时操作，建议在系统负载较低时执行
+ * @returns {Promise<Object>} 更新结果，包含更新数量和执行时间
+ */
+export function updateAllUserPreferences() {
+  return request({
+    url: '/admin/recommendation/preferences/update-all',
+    method: 'post'
+  })
+}
+
+/**
  * 计算所有商品间的相似度
  * @returns {Promise<Object>} 计算结果
  */

@@ -301,7 +301,7 @@ onMounted(() => {
 
 <template>
   <div class="behavior-container">
-    <div class="behavior-header">
+    <div class="page-header">
       <h1 class="page-title">{{ currentBehaviorTypeText }}历史</h1>
       <div class="header-actions">
         <el-button type="primary" plain size="small" @click="toggleDisplayMode">
@@ -529,22 +529,26 @@ onMounted(() => {
 
 <style scoped>
 .behavior-container {
-  padding: 20px;
-  background-color: #f8f9fa;
-  min-height: calc(100vh - 120px);
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 8px;
+  height: 100%;
 }
 
-.behavior-header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ebeef5;
 }
 
 .page-title {
-  font-size: 24px;
-  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
   color: #303133;
+  margin: 0;
 }
 
 .header-actions {

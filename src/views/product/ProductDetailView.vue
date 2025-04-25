@@ -52,18 +52,19 @@ const loadProductDetails = async () => {
       if (typeof product.value.images === 'string' && product.value.images) {
         product.value.images = product.value.images.split(',').filter(url => url && url.trim())
       } else if (!Array.isArray(product.value.images)) {
-        // 如果不是数组也不是字符串，或是空字符串，设为空数组
         product.value.images = []
       }
       
-      console.log('处理后的商品图集:', product.value.images) // 用于调试
+      // 获取相似商品推荐
+      const similarProducts = await recommendationStore.getSimilarProductRecommendations(productId.value, 5)
+      if (similarProducts.length > 0) {
+        similarProducts.value = similarProducts
+      }
     }
-    
-    similarProducts.value = productData.similarProducts || []
     
     // 记录浏览历史
     if (userStore.isLoggedIn) {
-      await behaviorStore.recordUserBehavior(productId.value, 1) // 1表示浏览行为
+      await behaviorStore.recordUserBehavior(productId.value, 1)
     }
     
     // 获取收藏状态

@@ -78,7 +78,8 @@ import {
   getRecentOrders,
   getSalesTrend,
   countNewReviews,
-  getStatisticsOverview
+  getStatisticsOverview,
+  updateAllUserPreferences
 } from '@/api/admin'
 
 export const useAdminStore = defineStore('admin', () => {
@@ -112,6 +113,7 @@ export const useAdminStore = defineStore('admin', () => {
   // ==================== 推荐管理状态 ====================
   const recommendationLoading = ref(false)
   const similarUsers = ref([])
+  const preferencesUpdateResult = ref(null)
   
   // ==================== 统计数据状态 ====================
   const dashboardLoading = ref(false)
@@ -1327,6 +1329,32 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
   
+  /**
+   * 更新所有用户偏好
+   * 这是一个耗时操作，建议在系统负载较低时执行
+   * @returns {Promise<Object>} 更新结果，包含更新数量和执行时间
+   */
+  const updateAllUserPreferences = async () => {
+    recommendationLoading.value = true
+    try {
+      const res = await updateAllUserPreferences()
+      if (res.code === 200) {
+        preferencesUpdateResult.value = res.data
+        ElMessage.success(res.message || '成功更新所有用户偏好')
+        return res.data
+      } else {
+        ElMessage.error(res.message || '更新所有用户偏好失败')
+        throw new Error(res.message || '更新所有用户偏好失败')
+      }
+    } catch (error) {
+      console.error('更新所有用户偏好失败', error)
+      ElMessage.error(error.response?.data?.message || '更新所有用户偏好失败')
+      throw error
+    } finally {
+      recommendationLoading.value = false
+    }
+  }
+  
   // ==================== 统计数据方法 ====================
   
   /**
@@ -1546,6 +1574,7 @@ export const useAdminStore = defineStore('admin', () => {
     // 推荐管理状态
     recommendationLoading,
     similarUsers,
+    preferencesUpdateResult,
     
     // 统计数据状态
     dashboardLoading,
@@ -1610,6 +1639,7 @@ export const useAdminStore = defineStore('admin', () => {
     calculatePreferences,
     generateRecommendations,
     fetchSimilarUsers,
+    updateAllUserPreferences,
     
     // 统计数据方法
     fetchDashboardSummary,

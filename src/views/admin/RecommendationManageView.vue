@@ -48,11 +48,11 @@
               <div class="stat-desc">根据用户行为分析用户兴趣，为个性化推荐提供基础</div>
               <div class="stat-action">
                 <el-button 
-                  type="primary" 
-                  @click="handleUserPreferences" 
-                  :loading="loading.preferences"
+                  type="warning" 
+                  @click="handleUpdateAllUserPreferences" 
+                  :loading="loading.updatePreferences"
                 >
-                  计算用户偏好
+                  更新所有用户偏好
                 </el-button>
               </div>
             </div>
@@ -269,103 +269,6 @@
         </el-tab-pane>
       </el-tabs>
     </el-card>
-    
-    <el-card class="schedule-card">
-      <template #header>
-        <div class="card-header">
-          <span>计算任务调度</span>
-        </div>
-      </template>
-      
-      <div class="schedule-desc">
-        <el-text type="info">
-          配置推荐系统的自动计算任务，系统将按照指定的时间周期自动执行推荐数据的更新，保持推荐结果的时效性。
-        </el-text>
-      </div>
-      
-      <el-row :gutter="20" class="schedule-row">
-        <el-col :span="8">
-          <el-card class="schedule-item">
-            <div class="schedule-title">商品相似度计算</div>
-            <el-form label-position="top">
-              <el-form-item label="执行周期">
-                <el-select v-model="schedule.similarities" placeholder="请选择执行周期">
-                  <el-option label="每天" value="daily" />
-                  <el-option label="每周" value="weekly" />
-                  <el-option label="每月" value="monthly" />
-                  <el-option label="手动执行" value="manual" />
-                </el-select>
-              </el-form-item>
-              <el-form-item v-if="schedule.similarities !== 'manual'">
-                <el-time-picker
-                  v-model="scheduleTime.similarities"
-                  placeholder="选择时间"
-                  format="HH:mm"
-                  value-format="HH:mm"
-                />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="saveSchedule('similarities')">保存设置</el-button>
-              </el-form-item>
-            </el-form>
-          </el-card>
-        </el-col>
-        
-        <el-col :span="8">
-          <el-card class="schedule-item">
-            <div class="schedule-title">用户偏好计算</div>
-            <el-form label-position="top">
-              <el-form-item label="执行周期">
-                <el-select v-model="schedule.preferences" placeholder="请选择执行周期">
-                  <el-option label="每天" value="daily" />
-                  <el-option label="每周" value="weekly" />
-                  <el-option label="每月" value="monthly" />
-                  <el-option label="手动执行" value="manual" />
-                </el-select>
-              </el-form-item>
-              <el-form-item v-if="schedule.preferences !== 'manual'">
-                <el-time-picker
-                  v-model="scheduleTime.preferences"
-                  placeholder="选择时间"
-                  format="HH:mm"
-                  value-format="HH:mm"
-                />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="saveSchedule('preferences')">保存设置</el-button>
-              </el-form-item>
-            </el-form>
-          </el-card>
-        </el-col>
-        
-        <el-col :span="8">
-          <el-card class="schedule-item">
-            <div class="schedule-title">推荐结果生成</div>
-            <el-form label-position="top">
-              <el-form-item label="执行周期">
-                <el-select v-model="schedule.recommendations" placeholder="请选择执行周期">
-                  <el-option label="每天" value="daily" />
-                  <el-option label="每周" value="weekly" />
-                  <el-option label="每月" value="monthly" />
-                  <el-option label="手动执行" value="manual" />
-                </el-select>
-              </el-form-item>
-              <el-form-item v-if="schedule.recommendations !== 'manual'">
-                <el-time-picker
-                  v-model="scheduleTime.recommendations"
-                  placeholder="选择时间"
-                  format="HH:mm"
-                  value-format="HH:mm"
-                />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="saveSchedule('recommendations')">保存设置</el-button>
-              </el-form-item>
-            </el-form>
-          </el-card>
-        </el-col>
-      </el-row>
-    </el-card>
   </div>
 </template>
 
@@ -411,7 +314,8 @@ const loading = reactive({
   singleSimilarity: false,
   singlePreference: false,
   singleRecommendation: false,
-  similarUsers: false
+  similarUsers: false,
+  updatePreferences: false
 })
 
 // 调度设置
@@ -650,6 +554,36 @@ const saveSchedule = (type) => {
   
   ElMessage.success(`已将${taskText}设置为${frequencyText}${timeText ? ' ' + timeText : ''}`)
 }
+
+/**
+ * 更新所有用户偏好
+ * 这是一个耗时操作，建议在系统负载较低时执行
+ */
+const handleUpdateAllUserPreferences = async () => {
+  ElMessageBox.confirm(
+    '更新所有用户偏好可能需要较长时间，建议在系统负载较低时执行。确定要继续吗？',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    loading.updatePreferences = true
+    try {
+      const result = await adminStore.updateAllUserPreferences()
+      ElMessage.success(`成功更新${result.updatedCount}个用户的偏好，耗时${result.executionTime}秒`)
+      status.lastPreferencesTime = new Date().toLocaleString()
+      status.preferenceCount = result.updatedCount
+    } catch (error) {
+      console.error('更新所有用户偏好失败', error)
+    } finally {
+      loading.updatePreferences = false
+    }
+  }).catch(() => {
+    // 用户取消操作
+  })
+}
 </script>
 
 <style scoped>
@@ -700,6 +634,9 @@ const saveSchedule = (type) => {
 
 .stat-action {
   margin-top: auto;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .status-row {

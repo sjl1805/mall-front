@@ -225,7 +225,7 @@ const submitAddressForm = async () => {
         city: addressForm.value.city,
         district: addressForm.value.district,
         detail: addressForm.value.detail,
-        isDefault: addressForm.value.isDefault
+        isDefault: addressForm.value.isDefault ? 1 : 0
       }
       
       if (addressForm.value.id) {
@@ -271,7 +271,7 @@ const deleteAddress = (address) => {
 
 // 设置为默认地址
 const setDefaultAddress = async (address) => {
-  if (address.isDefault) return
+  if (address.isDefault === 1) return
   
   try {
     await addressStore.setDefaultAddress(address.id)
@@ -317,15 +317,15 @@ onMounted(async () => {
           v-for="address in addresses" 
           :key="address.id" 
           class="address-card"
-          :class="{ 'default-address': address.isDefault }"
+          :class="{ 'default-address': address.isDefault === 1 }"
         >
           <div class="address-header">
             <div class="address-badges">
-              <el-tag v-if="address.isDefault" type="success" effect="dark" size="small">默认</el-tag>
+              <el-tag v-if="address.isDefault === 1" type="success" effect="dark" size="small">默认</el-tag>
             </div>
             <div class="address-actions">
               <el-button 
-                v-if="!address.isDefault" 
+                v-if="address.isDefault !== 1" 
                 size="small" 
                 type="primary" 
                 plain 
@@ -466,23 +466,29 @@ onMounted(async () => {
       </template>
     </el-dialog>
   </div>
-</template> 
+</template>
 
 <style scoped>
 .address-container {
-  padding: 0 20px;
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 8px;
+  height: 100%;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ebeef5;
 }
 
 .page-title {
-  font-size: 22px;
-  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
   margin: 0;
 }
 
@@ -591,4 +597,4 @@ onMounted(async () => {
     gap: 5px;
   }
 }
-</style> 
+</style>

@@ -379,19 +379,26 @@ const loadUserReviewsWithRetry = async (maxRetries = 1) => {
 
 <style scoped>
 .reviews-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 8px;
+  height: 100%;
 }
 
 .page-header {
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ebeef5;
 }
 
 .page-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0;
 }
 
 .loading-container {

@@ -246,63 +246,71 @@
       <div class="print-section">
         <h2>订单信息</h2>
         <table class="print-table">
-          <tr>
-            <td width="20%">订单编号：</td>
-            <td width="30%">{{ printOrder.orderNo }}</td>
-            <td width="20%">创建时间：</td>
-            <td width="30%">{{ printOrder.createTime }}</td>
-          </tr>
-          <tr>
-            <td>订单状态：</td>
-            <td>{{ getOrderStatusText(printOrder.status) }}</td>
-            <td>支付方式：</td>
-            <td>{{ getPaymentMethodText(printOrder.paymentMethod) ||'微信'}}</td>
-          </tr>
-          <tr>
-            <td>支付时间：</td>
-            <td>{{ printOrder.payTime || '未支付' }}</td>
-            <td>订单金额：</td>
-            <td>¥{{ printOrder.totalAmount?.toFixed(2) }}</td>
-          </tr>
+          <tbody>
+            <tr>
+              <td width="20%">订单编号：</td>
+              <td width="30%">{{ printOrder.orderNo }}</td>
+              <td width="20%">创建时间：</td>
+              <td width="30%">{{ printOrder.createTime }}</td>
+            </tr>
+            <tr>
+              <td>订单状态：</td>
+              <td>{{ getOrderStatusText(printOrder.status) }}</td>
+              <td>支付方式：</td>
+              <td>{{ getPaymentMethodText(printOrder.paymentMethod) ||'微信'}}</td>
+            </tr>
+            <tr>
+              <td>支付时间：</td>
+              <td>{{ printOrder.payTime || '未支付' }}</td>
+              <td>订单金额：</td>
+              <td>¥{{ printOrder.totalAmount?.toFixed(2) }}</td>
+            </tr>
+          </tbody>
         </table>
       </div>
       <div class="print-section">
         <h2>收货信息</h2>
         <table class="print-table">
-          <tr>
-            <td width="20%">收货人：</td>
-            <td width="30%">{{ printOrder.receiverName }}</td>
-            <td width="20%">联系电话：</td>
-            <td width="30%">{{ printOrder.receiverPhone }}</td>
-          </tr>
-          <tr>
-            <td>收货地址：</td>
-            <td colspan="3">{{ printOrder.receiverAddress }}</td>
-          </tr>
+          <tbody>
+            <tr>
+              <td width="20%">收货人：</td>
+              <td width="30%">{{ printOrder.receiverName }}</td>
+              <td width="20%">联系电话：</td>
+              <td width="30%">{{ printOrder.receiverPhone }}</td>
+            </tr>
+            <tr>
+              <td>收货地址：</td>
+              <td colspan="3">{{ printOrder.receiverAddress }}</td>
+            </tr>
+          </tbody>
         </table>
       </div>
       <div class="print-section">
         <h2>商品信息</h2>
         <table class="print-table print-product-table">
-          <tr>
-            <th>商品名称</th>
-            <th>规格</th>
-            <th>单价</th>
-            <th>数量</th>
-            <th>小计</th>
-          </tr>
-          <template v-if="printOrder.orderItems && printOrder.orderItems.length > 0">
-            <tr v-for="(item, index) in printOrder.orderItems" :key="index">
-              <td>{{ item.productName }}</td>
-              <td>{{ item.productAttr || '默认规格' }}</td>
-              <td>¥{{ item.price?.toFixed(2) }}</td>
-              <td>{{ item.quantity }}</td>
-              <td>¥{{ (item.price * item.quantity)?.toFixed(2) }}</td>
+          <thead>
+            <tr>
+              <th>商品名称</th>
+              <th>规格</th>
+              <th>单价</th>
+              <th>数量</th>
+              <th>小计</th>
             </tr>
-          </template>
-          <tr v-else>
-            <td colspan="5" style="text-align: center;">暂无商品信息</td>
-          </tr>
+          </thead>
+          <tbody>
+            <template v-if="printOrder.orderItems && printOrder.orderItems.length > 0">
+              <tr v-for="(item, index) in printOrder.orderItems" :key="index">
+                <td>{{ item.productName }}</td>
+                <td>{{ item.productAttr || '默认规格' }}</td>
+                <td>¥{{ item.price?.toFixed(2) }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>¥{{ (item.price * item.quantity)?.toFixed(2) }}</td>
+              </tr>
+            </template>
+            <tr v-else>
+              <td colspan="5" style="text-align: center;">暂无商品信息</td>
+            </tr>
+          </tbody>
         </table>
       </div>
       <div class="print-footer">

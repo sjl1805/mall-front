@@ -120,7 +120,10 @@ const goToLogin = () => {
 const goToCart = () => {
   router.push('/cart')
 }
-
+// 前往后台管理
+const goToAdmin = () => {
+  router.push('/admin/dashboard')
+}
 // 组件挂载时执行
 onMounted(() => {
   updateTitle()
@@ -174,8 +177,12 @@ onMounted(() => {
           </template>
           <span class="divider">|</span>
           <a @click="router.push('/user/orders')">我的订单</a>
-          <span class="divider">|</span>
-          <a @click="router.push('/help')">帮助中心</a>
+          <template v-if="userStore.isLoggedIn && userStore.isAdmin">
+            <span class="divider">|</span>
+            <a @click="goToAdmin" class="admin-link">
+              <el-icon><setting /></el-icon> 后台管理
+            </a>
+          </template>
         </div>
       </div>
     </div>
@@ -325,6 +332,7 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 15px;
+  width: 100%;
 }
 
 /* 顶部信息栏 */
@@ -442,13 +450,15 @@ onMounted(() => {
   padding: 0 15px;
   flex: 1;
   gap: 20px;
-  background-color: #f5f7fa;
   padding-top: 20px;
   padding-bottom: 20px;
+  min-height: 800px; /* 设置最小高度 */
+  width: 100%;
 }
 
 .user-sidebar {
   width: 220px;
+  flex-shrink: 0; /* 防止侧边栏被压缩 */
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -536,7 +546,23 @@ onMounted(() => {
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  height: 800px; /* 固定高度 */
+  overflow-y: auto; /* 内容超出时显示滚动条 */
+  position: relative; /* 为内部定位提供参考 */
+}
+
+/* 美化滚动条 */
+.user-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.user-content::-webkit-scrollbar-thumb {
+  background-color: #dcdfe6;
+  border-radius: 3px;
+}
+
+.user-content::-webkit-scrollbar-track {
+  background-color: #f5f7fa;
 }
 
 /* 页脚 */
@@ -686,6 +712,7 @@ onMounted(() => {
 
   .user-container {
     flex-direction: column;
+    min-height: auto;
   }
 
   .user-sidebar {
@@ -724,6 +751,11 @@ onMounted(() => {
 
   .footer-links a {
     margin: 0;
+  }
+
+  .user-content {
+    height: auto;
+    min-height: 600px; /* 移动端最小高度 */
   }
 }
 
