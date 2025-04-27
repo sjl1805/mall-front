@@ -111,22 +111,22 @@ export const useAddressStore = defineStore('address', () => {
   }
 
   // 更新地址
-  const updateAddressById = async (addressData) => {
+  const updateAddressById = async (addressId, addressData) => {
     loading.value = true
     try {
-      const res = await updateAddress(addressData)
+      const res = await updateAddress({ ...addressData, id: addressId })
       if (res.code === 200) {
         ElMessage.success('更新地址成功')
         
         // 如果是默认地址，更新默认地址
         if (addressData.isDefault === 1) {
-          defaultAddress.value = addressData
-        } else if (defaultAddress.value && defaultAddress.value.id === addressData.id) {
+          defaultAddress.value = { ...addressData, id: addressId }
+        } else if (defaultAddress.value && defaultAddress.value.id === addressId) {
           defaultAddress.value = null
         }
         
         // 更新地址列表中的对应地址
-        const index = addresses.value.findIndex(addr => addr.id === addressData.id)
+        const index = addresses.value.findIndex(addr => addr.id === addressId)
         if (index !== -1) {
           addresses.value[index] = { ...addresses.value[index], ...addressData }
         }

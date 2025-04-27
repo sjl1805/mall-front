@@ -94,7 +94,12 @@ const routes = [
         path: 'review/add/:productId',
         name: 'add-review',
         component: () => import('../views/review/AddReviewView.vue'),
-        meta: { title: '添加评价', requiresAuth: true }
+        meta: { title: '添加评价', requiresAuth: true },
+        props: (route) => ({
+          productId: Number(route.params.productId),
+          orderNo: route.query.orderNo,
+          orderItemId: Number(route.query.orderItemId)
+        })
       },
       // 推荐页面路由
       {

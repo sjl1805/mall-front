@@ -204,10 +204,20 @@ const deleteOrder = async (orderNo) => {
 
 // 去评价
 const goToReview = (item) => {
-  // 假设取第一个商品进行评价
   if (item.orderItems && item.orderItems.length > 0) {
-    const productId = item.orderItems[0].productId
-    router.push(`/review/add/${productId}`)
+    const orderItem = item.orderItems[0]
+    router.push({
+      name: 'add-review',
+      params: {
+        productId: orderItem.productId
+      },
+      query: {
+        orderNo: item.orderNo,
+        orderItemId: orderItem.id
+      }
+    })
+  } else {
+    ElMessage.warning('没有可评价的商品')
   }
 }
 
@@ -381,7 +391,7 @@ onMounted(async () => {
                   type="primary" 
                   @click="goToReview(item)"
                   :icon="Star"
-                  v-if="!item.reviewed"
+                  v-if="!item.reviewed && item.orderItems && item.orderItems.length > 0"
                 >
                   去评价
                 </el-button>

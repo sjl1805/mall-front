@@ -219,12 +219,12 @@ const submitAddressForm = async () => {
     
     try {
       const addressData = {
-        name: addressForm.value.name,
-        phone: addressForm.value.phone,
+        receiverName: addressForm.value.name,
+        receiverPhone: addressForm.value.phone,
         province: addressForm.value.province,
         city: addressForm.value.city,
         district: addressForm.value.district,
-        detail: addressForm.value.detail,
+        detailAddress: addressForm.value.detail,
         isDefault: addressForm.value.isDefault ? 1 : 0
       }
       

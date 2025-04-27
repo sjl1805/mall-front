@@ -151,7 +151,6 @@
                   <el-dropdown-item v-if="row.status === 1" command="ship">发货</el-dropdown-item>
                   <el-dropdown-item v-if="row.status === 0" command="cancel">取消订单</el-dropdown-item>
                   <el-dropdown-item command="note">修改备注</el-dropdown-item>
-                  <el-dropdown-item command="print">打印订单</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -172,45 +171,6 @@
         />
       </div>
     </el-card>
-    
-    <!-- 发货对话框 -->
-    <el-dialog v-model="dialogVisible.ship" title="订单发货" width="500px">
-      <el-form :model="shipForm" :rules="shipRules" ref="shipFormRef" label-width="100px">
-        <el-form-item label="订单编号">
-          <span>{{ currentOrder.orderNo }}</span>
-        </el-form-item>
-        <el-form-item label="收货人">
-          <span>{{ currentOrder.receiverName }}</span>
-        </el-form-item>
-        <el-form-item label="收货地址">
-          <span>{{ currentOrder.receiverAddress }}</span>
-        </el-form-item>
-        <el-form-item label="联系电话">
-          <span>{{ currentOrder.receiverPhone }}</span>
-        </el-form-item>
-        <el-form-item label="物流单号" prop="shippingCode">
-          <el-input v-model="shipForm.shippingCode" placeholder="请输入物流单号" />
-        </el-form-item>
-        <el-form-item label="物流公司">
-          <el-select v-model="shipForm.shippingCompany" placeholder="请选择物流公司">
-            <el-option label="顺丰速运" value="SF" />
-            <el-option label="中通快递" value="ZTO" />
-            <el-option label="圆通速递" value="YTO" />
-            <el-option label="韵达速递" value="YD" />
-            <el-option label="申通快递" value="STO" />
-            <el-option label="邮政EMS" value="EMS" />
-            <el-option label="京东物流" value="JD" />
-            <el-option label="其他" value="OTHER" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span>
-          <el-button @click="dialogVisible.ship = false">取消</el-button>
-          <el-button type="primary" @click="submitShipOrder(shipFormRef)">确认发货</el-button>
-        </span>
-      </template>
-    </el-dialog>
     
     <!-- 订单备注对话框 -->
     <el-dialog v-model="dialogVisible.note" title="修改订单备注" width="500px">
@@ -237,86 +197,6 @@
         </span>
       </template>
     </el-dialog>
-    
-    <!-- 打印订单 -->
-    <div ref="printRef" class="print-container" v-if="printVisible">
-      <div class="print-header">
-        <h1>订单详情</h1>
-      </div>
-      <div class="print-section">
-        <h2>订单信息</h2>
-        <table class="print-table">
-          <tbody>
-            <tr>
-              <td width="20%">订单编号：</td>
-              <td width="30%">{{ printOrder.orderNo }}</td>
-              <td width="20%">创建时间：</td>
-              <td width="30%">{{ printOrder.createTime }}</td>
-            </tr>
-            <tr>
-              <td>订单状态：</td>
-              <td>{{ getOrderStatusText(printOrder.status) }}</td>
-              <td>支付方式：</td>
-              <td>{{ getPaymentMethodText(printOrder.paymentMethod) ||'微信'}}</td>
-            </tr>
-            <tr>
-              <td>支付时间：</td>
-              <td>{{ printOrder.payTime || '未支付' }}</td>
-              <td>订单金额：</td>
-              <td>¥{{ printOrder.totalAmount?.toFixed(2) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="print-section">
-        <h2>收货信息</h2>
-        <table class="print-table">
-          <tbody>
-            <tr>
-              <td width="20%">收货人：</td>
-              <td width="30%">{{ printOrder.receiverName }}</td>
-              <td width="20%">联系电话：</td>
-              <td width="30%">{{ printOrder.receiverPhone }}</td>
-            </tr>
-            <tr>
-              <td>收货地址：</td>
-              <td colspan="3">{{ printOrder.receiverAddress }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="print-section">
-        <h2>商品信息</h2>
-        <table class="print-table print-product-table">
-          <thead>
-            <tr>
-              <th>商品名称</th>
-              <th>规格</th>
-              <th>单价</th>
-              <th>数量</th>
-              <th>小计</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-if="printOrder.orderItems && printOrder.orderItems.length > 0">
-              <tr v-for="(item, index) in printOrder.orderItems" :key="index">
-                <td>{{ item.productName }}</td>
-                <td>{{ item.productAttr || '默认规格' }}</td>
-                <td>¥{{ item.price?.toFixed(2) }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>¥{{ (item.price * item.quantity)?.toFixed(2) }}</td>
-              </tr>
-            </template>
-            <tr v-else>
-              <td colspan="5" style="text-align: center;">暂无商品信息</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="print-footer">
-        <p>打印时间：{{ new Date().toLocaleString() }}</p>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -326,11 +206,9 @@ import { useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Download, Money, Box, Van, CircleCheck, ArrowDown } from '@element-plus/icons-vue'
-import { usePrint } from '@/utils/print'
 
 const router = useRouter()
 const adminStore = useAdminStore()
-const { printRef, print } = usePrint()
 
 // 订单列表数据
 const orderList = ref([])
@@ -364,36 +242,14 @@ const queryParams = reactive({
 
 // 对话框控制
 const dialogVisible = reactive({
-  ship: false,
   note: false
 })
-
-// 发货表单
-const shipForm = reactive({
-  orderNo: '',
-  shippingCode: '',
-  shippingCompany: ''
-})
-
-// 发货表单校验规则
-const shipRules = {
-  shippingCode: [
-    { required: true, message: '请输入物流单号', trigger: 'blur' }
-  ]
-}
 
 // 备注表单
 const noteForm = reactive({
   orderNo: '',
   note: ''
 })
-
-// 打印相关
-const printVisible = ref(false)
-const printOrder = ref({})
-
-// 表单引用
-const shipFormRef = ref(null)
 
 // 加载订单列表
 const loadOrderList = async () => {
@@ -528,7 +384,7 @@ const handleOrderCommand = (command, row) => {
   
   switch (command) {
     case 'ship':
-      openShipDialog(row)
+      handleShipOrder(row)
       break
     case 'cancel':
       handleCancelOrder(row.orderNo)
@@ -536,45 +392,33 @@ const handleOrderCommand = (command, row) => {
     case 'note':
       openNoteDialog(row)
       break
-    case 'print':
-      handlePrintOrder(row.orderNo)
-      break
   }
 }
 
-// 打开发货对话框
-const openShipDialog = (order) => {
-  shipForm.orderNo = order.orderNo
-  shipForm.shippingCode = ''
-  shipForm.shippingCompany = ''
-  dialogVisible.ship = true
-}
-
-// 提交发货
-const submitShipOrder = async (formEl) => {
-  if (!formEl) return
-  
-  await formEl.validate(async (valid) => {
-    if (valid) {
-      try {
-        const success = await adminStore.shipOrderWithCode(
-          shipForm.orderNo,
-          shipForm.shippingCode
-        )
-        
-        if (success) {
-          ElMessage.success('订单发货成功')
-          dialogVisible.ship = false
-          loadOrderList()
-          loadOrderStatusDistribution()
-        }
-      } catch (error) {
-        console.error('订单发货失败', error)
-        ElMessage.error('订单发货失败')
-      }
-    } else {
-      ElMessage.warning('请填写完整的发货信息')
+// 处理发货
+const handleShipOrder = (order) => {
+  ElMessageBox.confirm(
+    `确定要将订单 ${order.orderNo} 标记为已发货吗？`,
+    '确认发货',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
     }
+  ).then(async () => {
+    try {
+      const success = await adminStore.shipOrder(order.orderNo)
+      if (success) {
+        ElMessage.success('订单已标记为已发货')
+        loadOrderList()
+        loadOrderStatusDistribution()
+      }
+    } catch (error) {
+      console.error('发货失败', error)
+      ElMessage.error('发货失败')
+    }
+  }).catch(() => {
+    // 取消操作
   })
 }
 
@@ -665,27 +509,6 @@ const handleExportOrders = async () => {
   } catch (error) {
     console.error('导出订单失败', error)
     ElMessage.error('导出订单失败')
-  }
-}
-
-// 打印订单
-const handlePrintOrder = async (orderNo) => {
-  try {
-    const orderDetail = await adminStore.fetchOrderDetail(orderNo)
-    printOrder.value = orderDetail
-    printVisible.value = true
-    
-    // 等待DOM渲染完成后打印
-    await nextTick()
-    print()
-    
-    // 打印完成后隐藏打印内容
-    setTimeout(() => {
-      printVisible.value = false
-    }, 1000)
-  } catch (error) {
-    console.error('获取订单详情失败', error)
-    ElMessage.error('获取订单详情失败')
   }
 }
 
@@ -789,51 +612,6 @@ onMounted(() => {
 .order-amount {
   font-weight: bold;
   color: #F56C6C;
-}
-
-/* 打印样式 */
-.print-container {
-  display: none;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-.print-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.print-section {
-  margin-bottom: 20px;
-}
-
-.print-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #ddd;
-  margin-bottom: 10px;
-}
-
-.print-table td, .print-table th {
-  border: 1px solid #ddd;
-  padding: 8px;
-}
-
-.print-product-table th {
-  background-color: #f2f2f2;
-}
-
-.print-footer {
-  text-align: right;
-  font-size: 12px;
-  color: #999;
-  margin-top: 30px;
-}
-
-@media print {
-  .print-container {
-    display: block;
-  }
 }
 
 @media (max-width: 768px) {

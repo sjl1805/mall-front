@@ -109,21 +109,22 @@ const goToReview = () => {
   
   // 验证是否已购买过商品且是否已评价
   try {
-    reviewStore.checkReviewed(productId.value)
-      .then(hasReviewed => {
-        if (hasReviewed) {
-          ElMessage.warning('您已评价过该商品')
-          return
+    reviewStore.checkCanReview(productId.value)
+      .then(result => {
+        if (result.canReview) {
+          // 跳转到评价页
+          router.push({
+            name: 'add-review',
+            params: { 
+              productId: productId.value
+            },
+            query: { 
+              orderNo: result.orderNo
+            }
+          })
+        } else {
+          ElMessage.warning(result.message || '您暂时无法评价该商品')
         }
-        
-        // 跳转到评价页
-        router.push({
-          path: `/review/add`,
-          query: { 
-            productId: productId.value,
-            orderId: 0  // 这里应传递真实订单ID，简化处理
-          }
-        })
       })
       .catch(error => {
         console.error('检查评价状态失败', error)

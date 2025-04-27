@@ -5,6 +5,7 @@ import { useReviewStore } from '@/stores/review'
 import { useProductStore } from '@/stores/product'
 import { useFileStore } from '@/stores/file'
 import { useUserStore } from '@/stores/user'
+import { useOrderStore } from '@/stores/order'
 import { ElMessage, ElUpload } from 'element-plus'
 import { Star, StarFilled, Upload } from '@element-plus/icons-vue'
 
@@ -15,10 +16,11 @@ const reviewStore = useReviewStore()
 const productStore = useProductStore()
 const fileStore = useFileStore()
 const userStore = useUserStore()
+const orderStore = useOrderStore()
 
 // 获取商品ID和订单ID
-const productId = computed(() => Number(route.query.productId))
-const orderId = computed(() => Number(route.query.orderId))
+const productId = computed(() => Number(route.params.productId))
+const orderNo = computed(() => route.query.orderNo)
 
 // 评价表单
 const reviewForm = ref({
@@ -42,7 +44,7 @@ const uploadHeaders = computed(() => ({
 
 // 初始化数据
 const initData = async () => {
-  if (!productId.value || !orderId.value) {
+  if (!productId.value || !orderNo.value) {
     ElMessage.error('参数错误')
     router.push('/user/orders')
     return
@@ -84,16 +86,30 @@ const initData = async () => {
 
   loading.value = true
   try {
-    // 获取商品信息
-    const productInfo = await productStore.getProductDetail(productId.value)
-    if (productInfo) {
-      product.value = productInfo
-      reviewForm.value.productId = productId.value
-      reviewForm.value.orderId = orderId.value
+    // 获取订单详情
+    const orderDetail = await orderStore.getOrderDetail(orderNo.value)
+    if (!orderDetail) {
+      throw new Error('获取订单信息失败')
     }
 
+    console.log('开始获取商品信息，商品ID:', productId.value)
+    // 获取商品信息
+    const productInfo = await productStore.fetchProductDetail(productId.value)
+    console.log('获取到的商品信息:', productInfo)
+    
+    if (!productInfo || !productInfo.product) {
+      throw new Error('获取商品信息失败')
+    }
+    
+    product.value = productInfo.product
+    reviewForm.value.productId = productId.value
+    reviewForm.value.orderId = orderDetail.id
+
     // 检查是否已评价
-    const reviewed = await reviewStore.checkReviewed(productId.value)
+    console.log('开始检查是否已评价，订单ID:', orderDetail.id)
+    const reviewed = await reviewStore.checkReviewed(orderDetail.id)
+    console.log('检查评价结果:', reviewed)
+    
     if (reviewed) {
       ElMessage.warning('该商品已评价')
       router.push('/user/reviews')
@@ -109,6 +125,9 @@ const initData = async () => {
         path: '/login',
         query: { redirect: route.fullPath }
       })
+    } else {
+      ElMessage.error('加载商品信息失败，请稍后重试')
+      router.push('/user/orders')
     }
   } finally {
     loading.value = false
@@ -171,6 +190,7 @@ const submitReview = async () => {
     }
   } catch (error) {
     console.error('提交评价失败', error)
+    ElMessage.error('提交评价失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -178,7 +198,7 @@ const submitReview = async () => {
 
 // 返回订单详情
 const goBack = () => {
-  router.push(`/order/detail/${orderId.value}`)
+  router.push(`/order/detail/${orderNo.value}`)
 }
 
 onMounted(() => {
@@ -205,7 +225,8 @@ onMounted(() => {
           </div>
           <div class="product-detail">
             <h3 class="product-name">{{ product.name }}</h3>
-            <p class="product-price">¥{{ product.price }}</p>
+            <p class="product-price">¥{{ product.price?.toFixed(2) }}</p>
+            <p class="product-desc">{{ product.description }}</p>
           </div>
         </div>
       </el-card>
@@ -216,20 +237,12 @@ onMounted(() => {
         <div class="rating-section">
           <div class="rating-label">商品评分：</div>
           <div class="rating-stars">
-            <span 
-              v-for="i in 5" 
-              :key="i"
-              class="star-item"
-              @click="reviewForm.rating = i"
-              @mouseenter="hoverRating = i"
-              @mouseleave="hoverRating = 0"
-            >
-              <el-icon :size="24" :color="i <= (hoverRating || reviewForm.rating) ? '#ff4d4f' : '#dcdfe6'">
-                <StarFilled v-if="i <= (hoverRating || reviewForm.rating)" />
-                <Star v-else />
-              </el-icon>
-            </span>
-            <span class="rating-text">{{ reviewStore.getRatingLevel(reviewForm.rating) }}</span>
+            <el-rate
+              v-model="reviewForm.rating"
+              show-score
+              :colors="['#FF9900', '#FF9900', '#FF9900']"
+              :texts="['很差', '较差', '一般', '不错', '很好']"
+            />
           </div>
         </div>
 
@@ -278,6 +291,14 @@ onMounted(() => {
         </div>
       </el-card>
     </template>
+
+    <div v-else class="error-container">
+      <el-empty description="商品信息加载失败">
+        <template #extra>
+          <el-button @click="goBack">返回</el-button>
+        </template>
+      </el-empty>
+    </div>
   </div>
 </template>
 
@@ -311,15 +332,16 @@ onMounted(() => {
 
 .product-info {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  gap: 20px;
 }
 
 .product-image {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   overflow: hidden;
   border-radius: 4px;
-  margin-right: 15px;
+  flex-shrink: 0;
 }
 
 .product-image img {
@@ -333,15 +355,24 @@ onMounted(() => {
 }
 
 .product-name {
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: bold;
   margin: 0 0 10px;
   color: #333;
 }
 
 .product-price {
-  font-size: 18px;
+  font-size: 20px;
   color: #ff4d4f;
+  margin: 0 0 10px;
+  font-weight: bold;
+}
+
+.product-desc {
+  font-size: 14px;
+  color: #666;
   margin: 0;
+  line-height: 1.5;
 }
 
 .review-form {
@@ -355,21 +386,12 @@ onMounted(() => {
 .rating-label {
   font-size: 16px;
   margin-bottom: 10px;
+  color: #333;
 }
 
 .rating-stars {
   display: flex;
   align-items: center;
-}
-
-.star-item {
-  cursor: pointer;
-  padding: 2px;
-}
-
-.rating-text {
-  margin-left: 10px;
-  color: #666;
 }
 
 .content-section {
@@ -402,6 +424,14 @@ onMounted(() => {
   gap: 15px;
 }
 
+.error-container {
+  padding: 40px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
 @media (max-width: 768px) {
   .product-info {
     flex-direction: column;
@@ -409,6 +439,8 @@ onMounted(() => {
   }
 
   .product-image {
+    width: 100%;
+    height: 200px;
     margin-bottom: 15px;
   }
 

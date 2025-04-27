@@ -231,11 +231,8 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 上传头像
-  const uploadAvatar = async (file) => {
+  const uploadAvatar = async (formData) => {
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      
       const res = await apiUploadAvatar(formData)
       
       if (res.code === 200) {

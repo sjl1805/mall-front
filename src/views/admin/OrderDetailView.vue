@@ -30,11 +30,6 @@
                 plain 
                 @click="openNoteDialog"
               >修改备注</el-button>
-              <el-button 
-                type="success" 
-                plain 
-                @click="handlePrintOrder"
-              >打印订单</el-button>
             </div>
           </div>
           
@@ -58,8 +53,8 @@
             </template>
             <el-descriptions :column="2" border>
               <el-descriptions-item label="订单编号">{{ orderDetail.orderNo }}</el-descriptions-item>
-              <el-descriptions-item label="下单时间">{{ orderDetail.createTime }}</el-descriptions-item>
-              <el-descriptions-item label="支付方式">{{ getPaymentMethodText(orderDetail.paymentMethod) }}</el-descriptions-item>
+              <el-descriptions-item label="下单时间">{{ orderDetail.createTimeStr }}</el-descriptions-item>
+              <el-descriptions-item label="支付方式">{{ orderDetail.payTypeDesc }}</el-descriptions-item>
               <el-descriptions-item label="支付时间">{{ orderDetail.payTime || '未支付' }}</el-descriptions-item>
               <el-descriptions-item label="发货时间">{{ orderDetail.deliveryTime || '未发货' }}</el-descriptions-item>
               <el-descriptions-item label="物流单号">
@@ -99,10 +94,10 @@
             <el-table-column label="商品图片" width="100">
               <template #default="{ row }">
                 <el-image 
-                  :src="row.productImage" 
+                  :src="fileStore.getPreviewUrl(row.productImage)" 
                   fit="cover" 
                   style="width: 60px; height: 60px" 
-                  :preview-src-list="[row.productImage]"
+                  :preview-src-list="[fileStore.getPreviewUrl(row.productImage)]"
                 />
               </template>
             </el-table-column>
@@ -120,7 +115,7 @@
             <el-table-column prop="quantity" label="数量" width="80" />
             <el-table-column label="小计" width="120">
               <template #default="{ row }">
-                <span class="subtotal">¥{{ (row.price * row.quantity)?.toFixed(2) }}</span>
+                <span class="subtotal">¥{{ row.totalPrice?.toFixed(2) }}</span>
               </template>
             </el-table-column>
           </el-table>
@@ -128,11 +123,11 @@
           <div class="order-amount-info">
             <div class="amount-item">
               <span>商品总价：</span>
-              <span>¥{{ (orderDetail.totalAmount - (orderDetail.shippingAmount || 0))?.toFixed(2) }}</span>
+              <span>¥{{ (orderDetail.totalAmount - orderDetail.freightAmount)?.toFixed(2) }}</span>
             </div>
             <div class="amount-item">
               <span>运费：</span>
-              <span>¥{{ orderDetail.shippingAmount?.toFixed(2) || '0.00' }}</span>
+              <span>¥{{ orderDetail.freightAmount?.toFixed(2) || '0.00' }}</span>
             </div>
             <div class="amount-item">
               <span>订单总价：</span>
@@ -230,86 +225,6 @@
         </span>
       </template>
     </el-dialog>
-    
-    <!-- 打印订单内容 -->
-    <div ref="printRef" class="print-container" v-if="printVisible">
-      <div class="print-header">
-        <h1>订单详情</h1>
-      </div>
-      <div class="print-section">
-        <h2>订单信息</h2>
-        <table class="print-table">
-          <tbody>
-            <tr>
-              <td width="20%">订单编号：</td>
-              <td width="30%">{{ orderDetail?.orderNo }}</td>
-              <td width="20%">创建时间：</td>
-              <td width="30%">{{ orderDetail?.createTime }}</td>
-            </tr>
-            <tr>
-              <td>订单状态：</td>
-              <td>{{ getOrderStatusText(orderDetail?.status) }}</td>
-              <td>支付方式：</td>
-              <td>{{ getPaymentMethodText(orderDetail?.paymentMethod) }}</td>
-            </tr>
-            <tr>
-              <td>支付时间：</td>
-              <td>{{ orderDetail?.payTime || '未支付' }}</td>
-              <td>订单金额：</td>
-              <td>¥{{ orderDetail?.totalAmount?.toFixed(2) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="print-section">
-        <h2>收货信息</h2>
-        <table class="print-table">
-          <tbody>
-            <tr>
-              <td width="20%">收货人：</td>
-              <td width="30%">{{ orderDetail?.receiverName }}</td>
-              <td width="20%">联系电话：</td>
-              <td width="30%">{{ orderDetail?.receiverPhone }}</td>
-            </tr>
-            <tr>
-              <td>收货地址：</td>
-              <td colspan="3">{{ orderDetail?.receiverAddress }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="print-section">
-        <h2>商品信息</h2>
-        <table class="print-table print-product-table">
-          <thead>
-            <tr>
-              <th>商品名称</th>
-              <th>规格</th>
-              <th>单价</th>
-              <th>数量</th>
-              <th>小计</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-if="orderDetail?.orderItems && orderDetail.orderItems.length > 0">
-              <tr v-for="(item, index) in orderDetail.orderItems" :key="index">
-                <td>{{ item.productName }}</td>
-                <td>{{ item.productAttr || '默认规格' }}</td>
-                <td>¥{{ item.price?.toFixed(2) }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>¥{{ (item.price * item.quantity)?.toFixed(2) }}</td>
-              </tr>
-            </template>
-            <tr v-else>
-              <td colspan="5" style="text-align: center;">暂无商品信息</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="print-footer">
-        <p>打印时间：{{ new Date().toLocaleString() }}</p>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -317,14 +232,14 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
+import { useFileStore } from '@/stores/file'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Back } from '@element-plus/icons-vue'
-import { usePrint } from '@/utils/print'
 
 const route = useRoute()
 const router = useRouter()
 const adminStore = useAdminStore()
-const { printRef, print } = usePrint()
+const fileStore = useFileStore()
 
 // 订单详情数据
 const orderDetail = ref(null)
@@ -353,9 +268,6 @@ const shipRules = {
 const noteForm = reactive({
   note: ''
 })
-
-// 打印相关
-const printVisible = ref(false)
 
 // 表单引用
 const shipFormRef = ref(null)
@@ -558,20 +470,6 @@ const submitUpdateNote = async () => {
   }
 }
 
-// 打印订单
-const handlePrintOrder = async () => {
-  printVisible.value = true
-  
-  // 等待DOM渲染完成后打印
-  await nextTick()
-  print()
-  
-  // 打印完成后隐藏打印内容
-  setTimeout(() => {
-    printVisible.value = false
-  }, 1000)
-}
-
 // 组件挂载时加载数据
 onMounted(() => {
   loadOrderDetail()
@@ -687,51 +585,6 @@ onMounted(() => {
   font-size: 12px;
   color: #909399;
   margin-top: 5px;
-}
-
-/* 打印样式 */
-.print-container {
-  display: none;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-}
-
-.print-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.print-section {
-  margin-bottom: 20px;
-}
-
-.print-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #ddd;
-  margin-bottom: 10px;
-}
-
-.print-table td, .print-table th {
-  border: 1px solid #ddd;
-  padding: 8px;
-}
-
-.print-product-table th {
-  background-color: #f2f2f2;
-}
-
-.print-footer {
-  text-align: right;
-  font-size: 12px;
-  color: #999;
-  margin-top: 30px;
-}
-
-@media print {
-  .print-container {
-    display: block;
-  }
 }
 
 @media (max-width: 768px) {

@@ -74,7 +74,7 @@ const getAvatarUrl = (avatarPath) => {
 }
 
 // 处理头像上传
-const handleAvatarUpload = (e) => {
+const handleAvatarUpload = async (e) => {
   const file = e.target.files[0]
   if (!file) return
   
@@ -90,9 +90,24 @@ const handleAvatarUpload = (e) => {
     return
   }
   
-  // 显示预览
-  userForm.value.avatarFile = file
-  userForm.value.avatarUrl = URL.createObjectURL(file)
+  try {
+    // 创建FormData对象
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    // 上传文件到用户头像接口
+    const result = await userStore.uploadAvatar(formData)
+    if (result && result.filePath) {
+      // 更新头像URL
+      userForm.value.avatarFile = file
+      userForm.value.avatarUrl = fileStore.getPreviewUrl(result.filePath)
+      userForm.value.avatar = result.filePath
+      ElMessage.success('头像上传成功')
+    }
+  } catch (error) {
+    console.error('头像上传失败', error)
+    ElMessage.error('头像上传失败')
+  }
 }
 
 // 触发文件选择

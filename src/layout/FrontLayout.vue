@@ -65,6 +65,15 @@ onMounted(async () => {
 // 获取购物车商品数量
 const cartCount = computed(() => cartStore.cartCount)
 
+// 更新搜索建议
+const updateSearchSuggestions = () => {
+  if (searchKeyword.value && searchKeyword.value.trim()) {
+    searchSuggestions.value = searchStore.getSearchSuggestions(searchKeyword.value)
+  } else {
+    searchSuggestions.value = []
+  }
+}
+
 // 处理搜索
 const handleSearch = () => {
   if (searchKeyword.value.trim()) {
@@ -75,6 +84,9 @@ const handleSearch = () => {
       path: '/search',
       query: { keyword: searchKeyword.value }
     })
+    // 清空搜索建议
+    searchSuggestions.value = []
+    isSearchFocused.value = false
   }
 }
 

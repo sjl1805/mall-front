@@ -84,7 +84,9 @@ export const useFileStore = defineStore('file', () => {
       return null
     }
     
-    const formData = prepareFileUpload(file)
+    const formData = new FormData()
+    formData.append('file', file)
+    
     const fileId = file.name + '_' + Date.now()
     
     // 初始化上传状态
