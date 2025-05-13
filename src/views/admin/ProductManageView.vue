@@ -1,43 +1,6 @@
 <template>
   <div class="product-manage-container">
-    <el-card class="search-card">
-      <template #header>
-        <div class="card-header">
-          <span>商品管理</span>
-        </div>
-      </template>
-      
-      <!-- 搜索表单 -->
-      <el-form :model="queryParams" inline>
-        <el-form-item label="商品名称">
-          <el-input v-model="queryParams.keyword" placeholder="请输入商品名称" clearable />
-        </el-form-item>
-        <el-form-item label="分类">
-          <el-cascader
-            v-model="queryParams.categoryId"
-            :options="categoryOptions"
-            :props="{ checkStrictly: true, value: 'id', label: 'name' }"
-            clearable
-            placeholder="请选择商品分类"
-          />
-        </el-form-item>
-        <el-form-item label="价格范围">
-          <el-input-number v-model="queryParams.minPrice" :precision="2" :min="0" placeholder="最低价" class="price-input" />
-          <span class="price-separator">-</span>
-          <el-input-number v-model="queryParams.maxPrice" :precision="2" :min="0" placeholder="最高价" class="price-input" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
-            <el-option label="上架" :value="1" />
-            <el-option label="下架" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search" @click="loadProductList">查询</el-button>
-          <el-button @click="resetQuery">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+
     
     <!-- 商品列表 -->
     <el-card class="list-card">
@@ -46,16 +9,6 @@
           <span>商品列表</span>
           <div class="button-group">
             <el-button type="primary" :icon="Plus" @click="handleAddProduct">添加商品</el-button>
-            <el-button
-              type="success"
-              :disabled="selectedProducts.length === 0"
-              @click="handleBatchOperation(1)"
-            >批量上架</el-button>
-            <el-button
-              type="warning"
-              :disabled="selectedProducts.length === 0"
-              @click="handleBatchOperation(0)"
-            >批量下架</el-button>
           </div>
         </div>
       </template>

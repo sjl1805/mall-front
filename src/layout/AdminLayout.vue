@@ -60,10 +60,6 @@ const toggleCollapse = () => {
           <span class="menu-icon">📝</span>
           <span class="menu-text">订单管理</span>
         </router-link>
-        <router-link to="/admin/recommendation">
-          <span class="menu-icon">🔍</span>
-          <span class="menu-text">推荐管理</span>
-        </router-link>
       </div>
     </aside>
 

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useReviewStore } from '@/stores/review'
 import { useFileStore } from '@/stores/file'
 import { useUserStore } from '@/stores/user'
+import { useProductStore } from '@/stores/product'
 import { ElMessage, ElMessageBox, ElPagination } from 'element-plus'
 import { StarFilled, Delete, View } from '@element-plus/icons-vue'
 
@@ -12,11 +13,14 @@ const router = useRouter()
 const reviewStore = useReviewStore()
 const fileStore = useFileStore()
 const userStore = useUserStore()
+const productStore = useProductStore()
 
 // 状态
 const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(10)
+// 商品信息缓存
+const productCache = ref({})
 
 // 计算属性
 const userReviews = computed(() => reviewStore.userReviews)
@@ -55,6 +59,9 @@ const loadUserReviews = async (page = 1, force = false) => {
       // 如果成功加载了数据，检查是否有评价列表
       if (userReviews.value && userReviews.value.length > 0) {
         console.log(`成功加载${userReviews.value.length}条评价`);
+        
+        // 预加载评价中商品的详情信息
+        await preloadProductInfo();
       } else if (isLoggedIn.value) {
         console.log('评价列表为空');
       }
@@ -70,6 +77,25 @@ const loadUserReviews = async (page = 1, force = false) => {
     }
   } finally {
     loading.value = false
+  }
+}
+
+// 预加载商品信息，用于获取价格
+const preloadProductInfo = async () => {
+  // 收集所有需要加载的商品ID（去重）
+  const productIds = [...new Set(userReviews.value
+    .filter(review => review.productId && !productCache.value[review.productId])
+    .map(review => review.productId))];
+  
+  if (productIds.length === 0) {
+    return;
+  }
+  
+  // 按批次处理，避免同时发送过多请求
+  const batchSize = 3;
+  for (let i = 0; i < productIds.length; i += batchSize) {
+    const batch = productIds.slice(i, i + batchSize);
+    await Promise.all(batch.map(id => getProductInfo(id)));
   }
 }
 
@@ -228,6 +254,65 @@ const loadUserReviewsWithRetry = async (maxRetries = 1) => {
     }
   }
 }
+
+// 格式化商品价格
+const formatPrice = (price) => {
+  return productStore.formatPrice(price)
+}
+
+// 刷新指定商品的价格信息
+const refreshProductPrice = async (productId) => {
+  try {
+    // 强制刷新商品信息
+    await getProductInfo(productId, true);
+    ElMessage.success('商品价格已更新');
+  } catch (error) {
+    console.error('刷新商品价格失败', error);
+    ElMessage.error('刷新商品价格失败');
+  }
+};
+
+// 获取商品详情并缓存
+const getProductInfo = async (productId, force = false) => {
+  // 如果缓存中已有该商品信息且不强制刷新，直接返回
+  if (!force && productCache.value[productId]) {
+    return productCache.value[productId];
+  }
+  
+  try {
+    const result = await productStore.fetchProductDetail(productId, false);
+    if (result && result.product) {
+      // 缓存商品信息
+      productCache.value[productId] = result.product;
+      return result.product;
+    }
+    return null;
+  } catch (error) {
+    console.error(`获取商品 ${productId} 详情失败`, error);
+    return null;
+  }
+};
+
+// 获取商品价格
+const getProductPrice = async (review) => {
+  // 如果评价中已包含价格信息，直接使用
+  if (review.productPrice || review.price) {
+    return review.productPrice || review.price
+  }
+  
+  // 如果缓存中有该商品，使用缓存中的价格
+  if (productCache.value[review.productId]) {
+    return productCache.value[review.productId].price
+  }
+  
+  // 否则获取商品信息
+  const product = await getProductInfo(review.productId)
+  if (product) {
+    return product.price
+  }
+  
+  return 0
+}
 </script>
 
 <template>
@@ -264,7 +349,19 @@ const loadUserReviewsWithRetry = async (maxRetries = 1) => {
               </div>
               <div class="product-details">
                 <h3 class="product-name" @click="viewProduct(review.productId)">{{ review.productName }}</h3>
-                <div class="product-price">¥{{ review.productPrice }}</div>
+                <div class="product-price-container">
+                  <div class="product-price" v-html="formatPrice(review.productPrice || review.price || (productCache[review.productId]?.price) || 0)"></div>
+                  <el-button 
+                    v-if="!review.productPrice && !review.price" 
+                    type="text" 
+                    size="small" 
+                    @click="refreshProductPrice(review.productId)"
+                    class="refresh-price-btn"
+                    title="刷新价格"
+                  >
+                    <i class="el-icon-refresh">↻</i>
+                  </el-button>
+                </div>
               </div>
             </div>
             
@@ -459,6 +556,11 @@ const loadUserReviewsWithRetry = async (maxRetries = 1) => {
   color: #ff6700;
 }
 
+.product-price-container {
+  display: flex;
+  align-items: center;
+}
+
 .product-price {
   font-size: 14px;
   color: #ff6700;
@@ -550,6 +652,16 @@ const loadUserReviewsWithRetry = async (maxRetries = 1) => {
   padding: 50px 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   text-align: center;
+}
+
+.refresh-price-btn {
+  margin-left: 5px;
+  padding: 2px;
+  color: #999;
+}
+
+.refresh-price-btn:hover {
+  color: #ff6700;
 }
 
 @media (max-width: 768px) {

@@ -29,6 +29,9 @@ const filter = ref({
   hasImage: false, // 是否只看有图评价
 })
 
+// 缓存商品价格
+const productPrices = ref({})
+
 // 获取商品ID
 const productId = computed(() => Number(route.params.id))
 const isLoggedIn = computed(() => userStore.isLoggedIn)
@@ -40,12 +43,38 @@ const showLoginDialog = ref(false)
 const loadProduct = async () => {
   if (!productId.value) return
 
+  loading.value = true
   try {
-    const productData = await productStore.getProductDetail(productId.value)
-    product.value = productData
+    // 尝试通过 fetchProductDetail 获取详细信息
+    const productData = await productStore.fetchProductDetail(productId.value, false)
+    
+    if (productData && productData.product) {
+      product.value = productData.product
+      console.log('商品信息加载成功:', product.value)
+    } else {
+      // 如果获取详情失败，尝试其他方式获取基本信息
+      console.warn('获取商品详情失败，尝试获取基本信息')
+      
+      const products = await productStore.fetchProducts({
+        page: 1,
+        size: 1,
+        productId: productId.value
+      })
+      
+      if (products && products.records && products.records.length > 0) {
+        product.value = products.records[0]
+        console.log('通过商品列表API获取信息成功:', product.value)
+      } else {
+        product.value = null
+        ElMessage.error('获取商品信息失败')
+      }
+    }
   } catch (error) {
     console.error('获取商品信息失败', error)
     ElMessage.error('获取商品信息失败')
+    product.value = null
+  } finally {
+    loading.value = false
   }
 }
 
@@ -77,6 +106,23 @@ const loadReviews = async (page = 1) => {
     if (reviewStore.productReviewPages[productId.value]) {
       totalReviews.value = reviewStore.productReviewPages[productId.value].total
     }
+    
+    // 确保有商品信息
+    if (product.value && product.value.id) {
+      // 对所有评价添加商品信息
+      for (const review of reviewData) {
+        if (!review.productInfo) {
+          review.productInfo = {
+            id: product.value.id,
+            name: product.value.name,
+            price: product.value.price,
+            originalPrice: product.value.originalPrice,
+            image: product.value.image
+          };
+        }
+      }
+    }
+    
   } catch (error) {
     console.error('获取评价列表失败', error)
     reviews.value = []
@@ -172,6 +218,11 @@ const getImageUrl = (imageUrl) => {
   return fileStore.getPreviewUrl(imageUrl)
 }
 
+// 格式化价格
+const formatPrice = (price, originalPrice) => {
+  return productStore.formatPrice(price, originalPrice)
+}
+
 // 页面加载时初始化数据
 onMounted(async () => {
   if (!productId.value) {
@@ -203,7 +254,7 @@ onMounted(async () => {
       </div>
       <div class="product-details">
         <h2 class="product-name">{{ product.name }}</h2>
-        <div class="product-price">¥{{ product.price }}</div>
+        <div class="product-price" v-html="formatPrice(product.price, product.originalPrice)"></div>
       </div>
     </div>
     
@@ -317,6 +368,22 @@ onMounted(async () => {
                 <span class="review-date">{{ formatDate(review.createTime || review.createTimeStr) }}</span>
               </div>
             </div>
+            
+            <!-- 评价商品信息 -->
+            <div class="review-product-info" v-if="review.productName || (review.productInfo && review.productInfo.name)">
+              <div class="review-product-image" v-if="review.productImage || (review.productInfo && review.productInfo.image)">
+                <img :src="getImageUrl(review.productImage || (review.productInfo && review.productInfo.image))" alt="商品图片">
+              </div>
+              <div class="review-product-details">
+                <div class="review-product-name">{{ review.productName || (review.productInfo && review.productInfo.name) }}</div>
+                <div class="review-product-price" 
+                     v-html="formatPrice(
+                       review.productInfo ? review.productInfo.price : (review.productPrice || product.price), 
+                       review.productInfo ? review.productInfo.originalPrice : (review.productOriginalPrice || product.originalPrice)
+                     )"></div>
+              </div>
+            </div>
+            
             <div class="review-content">{{ review.content }}</div>
             <div v-if="review.images && review.images.length" class="review-images">
               <el-image
@@ -453,6 +520,57 @@ onMounted(async () => {
 .product-price {
   font-size: 16px;
   color: #ff6700;
+}
+
+:deep(.product-price del) {
+  margin-left: 5px;
+  font-weight: normal;
+}
+
+/* 评价中的商品信息样式 */
+.review-product-info {
+  display: flex;
+  align-items: center;
+  background: #f9f9f9;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.review-product-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-right: 10px;
+}
+
+.review-product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.review-product-details {
+  flex: 1;
+}
+
+.review-product-name {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.review-product-price {
+  font-size: 14px;
+  color: #ff6700;
+}
+
+:deep(.review-product-price del) {
+  margin-left: 5px;
+  font-weight: normal;
+  font-size: 12px;
+  color: #999;
 }
 
 .review-stats {

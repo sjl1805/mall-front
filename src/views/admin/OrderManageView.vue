@@ -1,46 +1,8 @@
 <template>
   <div class="order-manage-container">
-    <el-card class="search-card">
-      <template #header>
-        <div class="card-header">
-          <span>订单管理</span>
-        </div>
-      </template>
-      
-      <!-- 搜索表单 -->
-      <el-form :model="queryParams" inline>
-        <el-form-item label="订单编号">
-          <el-input v-model="queryParams.orderNo" placeholder="请输入订单编号" clearable />
-        </el-form-item>
-        <el-form-item label="订单状态">
-          <el-select v-model="queryParams.status" placeholder="请选择订单状态" clearable>
-            <el-option label="待付款" :value="0" />
-            <el-option label="待发货" :value="1" />
-            <el-option label="已发货" :value="2" />
-            <el-option label="已完成" :value="3" />
-            <el-option label="已取消" :value="4" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="时间范围">
-          <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
-            style="width: 240px"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search" @click="loadOrderList">查询</el-button>
-          <el-button @click="resetQuery">重置</el-button>
-          <el-button type="success" :icon="Download" @click="handleExportOrders">导出订单</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+
     
-    <!-- 订单统计卡片 -->
+    <!-- 订单统计卡片
     <el-row :gutter="20" class="stat-row">
       <el-col :span="6">
         <el-card class="stat-card" shadow="hover">
@@ -94,7 +56,7 @@
           </div>
         </el-card>
       </el-col>
-    </el-row>
+    </el-row> -->
     
     <!-- 订单列表 -->
     <el-card class="list-card">
@@ -148,7 +110,6 @@
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item v-if="row.status === 1" command="ship">发货</el-dropdown-item>
                   <el-dropdown-item v-if="row.status === 0" command="cancel">取消订单</el-dropdown-item>
                   <el-dropdown-item command="note">修改备注</el-dropdown-item>
                 </el-dropdown-menu>
@@ -197,6 +158,45 @@
         </span>
       </template>
     </el-dialog>
+    
+    <!-- 发货对话框 -->
+    <el-dialog v-model="dialogVisible.ship" title="订单发货" width="500px">
+      <el-form :model="shipForm" label-width="100px" :rules="shipFormRules" ref="shipFormRef">
+        <el-form-item label="订单编号">
+          <span>{{ currentOrder.orderNo }}</span>
+        </el-form-item>
+        <el-form-item label="收货人">
+          <span>{{ currentOrder.receiverName }}</span>
+        </el-form-item>
+        <el-form-item label="联系电话">
+          <span>{{ currentOrder.receiverPhone }}</span>
+        </el-form-item>
+        <el-form-item label="收货地址">
+          <span>{{ currentOrder.receiverAddress }}</span>
+        </el-form-item>
+        <el-form-item label="物流公司" prop="shippingCompany">
+          <el-select v-model="shipForm.shippingCompany" placeholder="请选择物流公司" style="width: 100%">
+            <el-option label="顺丰速运" value="SF" />
+            <el-option label="中通快递" value="ZTO" />
+            <el-option label="圆通速递" value="YTO" />
+            <el-option label="韵达快递" value="YD" />
+            <el-option label="申通快递" value="STO" />
+            <el-option label="京东物流" value="JD" />
+            <el-option label="邮政快递" value="YZPY" />
+            <el-option label="其他" value="OTHER" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="物流单号" prop="trackingNumber">
+          <el-input v-model="shipForm.trackingNumber" placeholder="请输入物流单号" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span>
+          <el-button @click="dialogVisible.ship = false">取消</el-button>
+          <el-button type="primary" @click="submitShipOrder">确定发货</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -214,6 +214,7 @@ const adminStore = useAdminStore()
 const orderList = ref([])
 const total = ref(0)
 const loading = ref(false)
+const shipFormRef = ref(null)
 
 // 订单统计数据
 const orderStatusCount = reactive({
@@ -242,7 +243,8 @@ const queryParams = reactive({
 
 // 对话框控制
 const dialogVisible = reactive({
-  note: false
+  note: false,
+  ship: false
 })
 
 // 备注表单
@@ -250,6 +252,22 @@ const noteForm = reactive({
   orderNo: '',
   note: ''
 })
+
+// 发货表单
+const shipForm = reactive({
+  shippingCompany: '',
+  trackingNumber: ''
+})
+
+// 发货表单验证规则
+const shipFormRules = {
+  shippingCompany: [
+    { required: true, message: '请选择物流公司', trigger: 'change' }
+  ],
+  trackingNumber: [
+    { required: true, message: '请输入物流单号', trigger: 'change' }
+  ]
+}
 
 // 加载订单列表
 const loadOrderList = async () => {
@@ -397,29 +415,12 @@ const handleOrderCommand = (command, row) => {
 
 // 处理发货
 const handleShipOrder = (order) => {
-  ElMessageBox.confirm(
-    `确定要将订单 ${order.orderNo} 标记为已发货吗？`,
-    '确认发货',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(async () => {
-    try {
-      const success = await adminStore.shipOrder(order.orderNo)
-      if (success) {
-        ElMessage.success('订单已标记为已发货')
-        loadOrderList()
-        loadOrderStatusDistribution()
-      }
-    } catch (error) {
-      console.error('发货失败', error)
-      ElMessage.error('发货失败')
-    }
-  }).catch(() => {
-    // 取消操作
-  })
+  currentOrder.value = order
+  // 重置发货表单
+  shipForm.shippingCompany = ''
+  shipForm.trackingNumber = ''
+  // 打开发货对话框
+  dialogVisible.ship = true
 }
 
 // 取消订单
@@ -510,6 +511,31 @@ const handleExportOrders = async () => {
     console.error('导出订单失败', error)
     ElMessage.error('导出订单失败')
   }
+}
+
+// 提交发货
+const submitShipOrder = async () => {
+  if (!shipFormRef.value) return
+
+  await shipFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        const success = await adminStore.shipOrder(currentOrder.value.orderNo, shipForm.shippingCompany, shipForm.trackingNumber)
+        if (success) {
+          ElMessage.success('订单已标记为已发货')
+          dialogVisible.ship = false
+          loadOrderList()
+          loadOrderStatusDistribution()
+        }
+      } catch (error) {
+        console.error('发货失败', error)
+        ElMessage.error('发货失败')
+      }
+    } else {
+      ElMessage.warning('请填写完整的物流信息')
+      return false
+    }
+  })
 }
 
 // 组件挂载时加载数据

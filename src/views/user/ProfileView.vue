@@ -292,36 +292,6 @@ onMounted(() => {
           <el-button type="primary" plain @click="$router.push('/user/password')">修改密码</el-button>
         </div>
       </div>
-      
-      <div class="security-item">
-        <div class="security-icon" :class="userForm.phone ? 'safe' : 'danger'">
-          <i class="el-icon-mobile-phone"></i>
-        </div>
-        <div class="security-info">
-          <h4>手机绑定</h4>
-          <p v-if="userForm.phone">已绑定: {{ userForm.phone }}</p>
-          <p v-else>绑定手机号码可增强账号安全性</p>
-        </div>
-        <div class="security-action">
-          <el-button type="primary" plain v-if="!userForm.phone" @click="startEditing">绑定手机</el-button>
-          <el-button v-else @click="startEditing">修改</el-button>
-        </div>
-      </div>
-      
-      <div class="security-item">
-        <div class="security-icon" :class="userForm.email ? 'safe' : 'danger'">
-          <i class="el-icon-message"></i>
-        </div>
-        <div class="security-info">
-          <h4>邮箱绑定</h4>
-          <p v-if="userForm.email">已绑定: {{ userForm.email }}</p>
-          <p v-else>绑定邮箱可用于接收订单通知，找回密码等</p>
-        </div>
-        <div class="security-action">
-          <el-button type="primary" plain v-if="!userForm.email" @click="startEditing">绑定邮箱</el-button>
-          <el-button v-else @click="startEditing">修改</el-button>
-        </div>
-      </div>
     </el-card>
   </div>
 </template>

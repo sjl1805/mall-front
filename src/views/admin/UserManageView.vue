@@ -9,6 +9,11 @@ import { Search, Plus, Edit, Delete, Lock, More } from '@element-plus/icons-vue'
 const adminStore = useAdminStore()
 const fileStore = useFileStore()
 
+// 添加表单引用
+const addFormRef = ref(null)
+const editFormRef = ref(null)
+const resetPasswordFormRef = ref(null)
+
 // 用户列表数据
 const userList = ref([])
 const total = ref(0)
@@ -217,9 +222,9 @@ const openResetPasswordDialog = (userId) => {
 }
 
 // 提交添加用户
-const submitAddUser = async (formEl) => {
-  if (!formEl) return
-  await formEl.validate(async (valid) => {
+const submitAddUser = async () => {
+  if (!addFormRef.value) return
+  await addFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
         // 构建用户对象，去除确认密码字段
@@ -239,9 +244,9 @@ const submitAddUser = async (formEl) => {
 }
 
 // 提交编辑用户
-const submitEditUser = async (formEl) => {
-  if (!formEl) return
-  await formEl.validate(async (valid) => {
+const submitEditUser = async () => {
+  if (!editFormRef.value) return
+  await editFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
         // 构建用户对象，去除不需要的字段
@@ -265,9 +270,9 @@ const submitEditUser = async (formEl) => {
 }
 
 // 提交重置密码
-const submitResetPassword = async (formEl) => {
-  if (!formEl) return
-  await formEl.validate(async (valid) => {
+const submitResetPassword = async () => {
+  if (!resetPasswordFormRef.value) return
+  await resetPasswordFormRef.value.validate(async (valid) => {
     if (valid) {
       try {
         const success = await adminStore.resetUserPassword(
@@ -362,20 +367,17 @@ onMounted(() => {
 
 <template>
   <div class="user-manage-container">
-    <el-card class="search-card">
+    <!-- <el-card class="search-card">
       <template #header>
         <div class="card-header">
           <span>用户管理</span>
         </div>
       </template>
       
-      <!-- 搜索表单 -->
+      <!-- 搜索表单 
       <el-form :model="queryParams" inline>
         <el-form-item label="用户名">
           <el-input v-model="queryParams.username" placeholder="请输入用户名" clearable />
-        </el-form-item>
-        <el-form-item label="昵称">
-          <el-input v-model="queryParams.nickname" placeholder="请输入昵称" clearable />
         </el-form-item>
         <el-form-item label="手机号">
           <el-input v-model="queryParams.phone" placeholder="请输入手机号" clearable />
@@ -394,7 +396,7 @@ onMounted(() => {
           <el-button @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </el-card> -->
     
     <!-- 用户列表 -->
     <el-card class="list-card">
@@ -540,7 +542,7 @@ onMounted(() => {
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="dialogVisible.add = false">取消</el-button>
-          <el-button type="primary" @click="submitAddUser(addFormRef)">确定</el-button>
+          <el-button type="primary" @click="submitAddUser()">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -605,7 +607,7 @@ onMounted(() => {
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="dialogVisible.edit = false">取消</el-button>
-          <el-button type="primary" @click="submitEditUser(editFormRef)">确定</el-button>
+          <el-button type="primary" @click="submitEditUser()">确定</el-button>
         </span>
       </template>
     </el-dialog>
@@ -632,7 +634,7 @@ onMounted(() => {
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="dialogVisible.resetPassword = false">取消</el-button>
-          <el-button type="primary" @click="submitResetPassword(resetPasswordFormRef)">确定</el-button>
+          <el-button type="primary" @click="submitResetPassword()">确定</el-button>
         </span>
       </template>
     </el-dialog>

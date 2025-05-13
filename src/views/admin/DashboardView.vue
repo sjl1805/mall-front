@@ -1,9 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAdminStore } from '@/stores/admin'
 import { useUserStore } from '@/stores/user'
-import { storeToRefs } from 'pinia'
 import { ElMessage, ElLoading } from 'element-plus'
 import * as echarts from 'echarts/core'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
@@ -19,10 +17,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { 
   User as IconUser, 
   List as IconList, 
-  Goods as IconGoods, 
-  Menu as IconMenu,
-  Star as IconStar,
-  Plus as IconPlus,
+  Goods as IconGoods,
   Money as IconMoney
 } from '@element-plus/icons-vue'
 
@@ -39,7 +34,6 @@ echarts.use([
   CanvasRenderer
 ])
 
-const router = useRouter()
 const adminStore = useAdminStore()
 const userStore = useUserStore()
 
@@ -53,13 +47,11 @@ const loading = ref(false)
 // 图表实例引用
 const orderTrendChart = ref(null)
 const orderStatusChart = ref(null)
-const userGrowthChart = ref(null)
 
 // 图表实例
 const chartInstances = {
   orderTrend: null,
-  orderStatus: null,
-  userGrowth: null
+  orderStatus: null
 }
 
 // 监听窗口大小变化，重绘图表
@@ -93,14 +85,7 @@ const loadStatistics = async () => {
       userStatistics.value = {
         totalUsers: dashboardData.value.user.total,
         todayNewUsers: dashboardData.value.user.today,
-        activeUsers: dashboardData.value.user.active,
-        dailyRegistrations: []  // 如果需要图表数据，可能还需要单独请求
-      }
-      
-      // 获取用户注册趋势数据用于图表
-      const dailyUserRegistrations = await adminStore.fetchDailyUserRegistrations(7)
-      if (userStatistics.value) {
-        userStatistics.value.dailyRegistrations = dailyUserRegistrations
+        activeUsers: dashboardData.value.user.active
       }
     }
     
@@ -165,7 +150,6 @@ const initCharts = () => {
   setTimeout(() => {
     initOrderTrendChart()
     initOrderStatusChart()
-    initUserGrowthChart()
     
     // 绑定窗口大小变化事件
     window.removeEventListener('resize', handleResize)
@@ -202,15 +186,46 @@ const initOrderTrendChart = () => {
     tooltip: {
       trigger: 'axis'
     },
+    legend: {
+      data: ['订单数量', '销售额'],
+      bottom: 10
+    },
     xAxis: {
       type: 'category',
       data: salesTrendData && salesTrendData.length > 0 
         ? salesTrendData.map(item => item.date || '')
         : dailyOrders.map(item => item.date || '')
     },
-    yAxis: {
-      type: 'value'
-    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '订单数量',
+        position: 'left',
+        axisLine: {
+          show: true,
+          lineStyle: {
+            color: '#409EFF'
+          }
+        },
+        axisLabel: {
+          formatter: '{value} 单'
+        }
+      },
+      {
+        type: 'value',
+        name: '销售额',
+        position: 'right',
+        axisLine: {
+          show: true,
+          lineStyle: {
+            color: '#67C23A'
+          }
+        },
+        axisLabel: {
+          formatter: '¥{value}'
+        }
+      }
+    ],
     series: [
       {
         name: '订单数量',
@@ -240,6 +255,7 @@ const initOrderTrendChart = () => {
       {
         name: '销售额',
         type: 'line',
+        yAxisIndex: 1,
         data: salesTrendData && salesTrendData.length > 0
           ? salesTrendData.map(item => item.sales || 0)
           : dailyOrders.map(item => item.amount || 0),
@@ -332,96 +348,6 @@ const initOrderStatusChart = () => {
   }
   
   chartInstances.orderStatus.setOption(option)
-}
-
-// 初始化用户增长图表
-const initUserGrowthChart = () => {
-  if (!userGrowthChart.value || !userStatistics.value) {
-    console.warn('用户增长图表DOM元素不存在或数据为空')
-    return
-  }
-  
-  // 确保DOM元素有宽高
-  if (userGrowthChart.value.clientWidth === 0 || userGrowthChart.value.clientHeight === 0) {
-    console.warn('用户增长图表DOM元素宽高为0，延迟初始化')
-    setTimeout(initUserGrowthChart, 300)
-    return
-  }
-  
-  // 创建图表实例
-  chartInstances.userGrowth = echarts.init(userGrowthChart.value)
-  
-  // 获取每日用户注册数据
-  const dailyRegistrationsData = userStatistics.value.dailyRegistrations || []
-  
-  // 转换为数组格式，以便于 ECharts 使用
-  const dates = []
-  const counts = []
-  
-  // 如果是对象格式，转换为数组
-  if (typeof dailyRegistrationsData === 'object' && !Array.isArray(dailyRegistrationsData)) {
-    for (const date in dailyRegistrationsData) {
-      if (Object.prototype.hasOwnProperty.call(dailyRegistrationsData, date)) {
-        dates.push(date)
-        counts.push(dailyRegistrationsData[date])
-      }
-    }
-    // 按日期排序
-    const sortedIndices = dates.map((date, index) => index)
-      .sort((a, b) => new Date(dates[a]) - new Date(dates[b]))
-    
-    dates.length = 0
-    counts.length = 0
-    
-    for (const index of sortedIndices) {
-      dates.push(Object.keys(dailyRegistrationsData)[index])
-      counts.push(Object.values(dailyRegistrationsData)[index])
-    }
-  } else {
-    // 如果已经是数组格式，直接使用
-    const dailyRegistrations = Array.isArray(dailyRegistrationsData) 
-      ? dailyRegistrationsData 
-      : []
-      
-    for (const item of dailyRegistrations) {
-      dates.push(item.date || '')
-      counts.push(item.count || 0)
-    }
-  }
-  
-  const option = {
-    title: {
-      text: '用户增长趋势',
-      left: 'center'
-    },
-    tooltip: {
-      trigger: 'axis'
-    },
-    xAxis: {
-      type: 'category',
-      data: dates
-    },
-    yAxis: {
-      type: 'value'
-    },
-    series: [
-      {
-        name: '新增用户',
-        type: 'bar',
-        data: counts,
-        itemStyle: {
-          color: '#E6A23C'
-        }
-      }
-    ]
-  }
-  
-  chartInstances.userGrowth.setOption(option)
-}
-
-// 导航到指定路径
-const navigateTo = (path) => {
-  router.push(path)
 }
 
 // 组件销毁时清理资源
@@ -525,98 +451,6 @@ onMounted(async () => {
           </el-card>
         </el-col>
       </el-row>
-
-      <el-row :gutter="20" class="chart-section">
-        <el-col :xs="24" :md="12">
-          <el-card shadow="hover" class="chart-card">
-            <div ref="userGrowthChart" class="chart"></div>
-          </el-card>
-        </el-col>
-        
-        <el-col :xs="24" :md="12">
-          <el-card shadow="hover" class="quick-actions">
-            <template #header>
-              <div class="card-header">
-                <h3>快捷操作</h3>
-              </div>
-            </template>
-            
-            <div class="action-grid">
-              <div class="action-item" @click="navigateTo('/admin/products')">
-                <el-icon><icon-goods /></el-icon>
-                <span>商品管理</span>
-              </div>
-              <div class="action-item" @click="navigateTo('/admin/orders')">
-                <el-icon><icon-list /></el-icon>
-                <span>订单管理</span>
-              </div>
-              <div class="action-item" @click="navigateTo('/admin/users')">
-                <el-icon><icon-user /></el-icon>
-                <span>用户管理</span>
-              </div>
-              <div class="action-item" @click="navigateTo('/admin/categories')">
-                <el-icon><icon-menu /></el-icon>
-                <span>分类管理</span>
-              </div>
-              <div class="action-item" @click="navigateTo('/admin/recommendation')">
-                <el-icon><icon-star /></el-icon>
-                <span>推荐管理</span>
-              </div>
-              <div class="action-item" @click="navigateTo('/admin/product/add')">
-                <el-icon><icon-plus /></el-icon>
-                <span>添加商品</span>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <!-- 待处理任务 -->
-      <el-row :gutter="20" class="task-section">
-        <el-col :xs="24">
-          <el-card shadow="hover">
-            <template #header>
-              <div class="card-header">
-                <h3>待处理任务</h3>
-              </div>
-            </template>
-            
-            <el-table :data="[
-              { 
-                id: 1, 
-                type: '订单', 
-                count: dashboardData?.order?.pending || adminStore.dashboardSummary?.pendingDeliveries || orderStatistics?.pendingOrders || 0, 
-                desc: '待发货订单' 
-              },
-              { 
-                id: 2, 
-                type: '商品', 
-                count: dashboardData?.product?.lowStock || adminStore.dashboardSummary?.lowStockProducts || orderStatistics?.lowStockProducts || 0, 
-                desc: '库存不足商品' 
-              },
-              { 
-                id: 3, 
-                type: '评价', 
-                count: dashboardData?.newReviews || adminStore.dashboardSummary?.newReviews || orderStatistics?.newReviews || 0, 
-                desc: '新增商品评价' 
-              }
-            ]" style="width: 100%">
-              <el-table-column prop="type" label="类型" width="180" />
-              <el-table-column prop="count" label="数量" width="180" />
-              <el-table-column prop="desc" label="描述" />
-              <el-table-column fixed="right" label="操作" width="120">
-                <template #default="scope">
-                  <el-button link type="primary" size="small" @click="navigateTo(
-                    scope.row.type === '订单' ? '/admin/orders' : 
-                    scope.row.type === '商品' ? '/admin/products' : 
-                    '/admin/reviews'
-                  )">查看</el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </el-card>
-        </el-col>
-      </el-row>
     </template>
 
     <!-- 刷新按钮 -->
@@ -636,113 +470,169 @@ onMounted(async () => {
 .dashboard-container {
   padding: 20px;
   position: relative;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+  min-height: calc(100vh - 60px);
+  border-radius: 8px;
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .page-title {
-  font-size: 24px;
+  font-size: 28px;
   color: #303133;
   margin: 0;
+  font-weight: 600;
+  position: relative;
+}
+
+.page-title::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 40px;
+  height: 4px;
+  background: #409eff;
+  border-radius: 2px;
 }
 
 .welcome-message {
   font-size: 16px;
   color: #606266;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(5px);
 }
 
 .user-role {
-  background-color: #ecf5ff;
-  color: #409eff;
-  padding: 2px 8px;
-  border-radius: 4px;
+  background: linear-gradient(135deg, #409eff 0%, #64b5f6 100%);
+  color: white;
+  padding: 2px 10px;
+  border-radius: 20px;
   font-size: 14px;
   margin-left: 10px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
 .data-overview {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .data-card {
   display: flex;
   align-items: center;
-  height: 100px;
+  height: 120px;
   overflow: hidden;
-  transition: all 0.3s;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
 }
 
 .data-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-8px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1) !important;
 }
 
 .data-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
+  width: 70px;
+  height: 70px;
+  border-radius: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-right: 16px;
+  margin-right: 20px;
+  margin-left: 16px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+}
+
+.data-card:hover .data-icon {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .data-icon svg {
   font-size: 32px;
   color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .user-icon {
-  background-color: #409eff;
+  background: linear-gradient(135deg, #409eff 0%, #64b5f6 100%);
 }
 
 .order-icon {
-  background-color: #67c23a;
+  background: linear-gradient(135deg, #67c23a 0%, #95d475 100%);
 }
 
 .sales-icon {
-  background-color: #e6a23c;
+  background: linear-gradient(135deg, #e6a23c 0%, #f3d19e 100%);
 }
 
 .product-icon {
-  background-color: #f56c6c;
+  background: linear-gradient(135deg, #f56c6c 0%, #f89898 100%);
 }
 
 .data-info {
   flex: 1;
+  padding-right: 16px;
 }
 
 .data-title {
-  font-size: 14px;
+  font-size: 15px;
   color: #909399;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  font-weight: 500;
 }
 
 .data-value {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: bold;
   color: #303133;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  background-image: linear-gradient(90deg, #303133, #606266);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .data-desc {
-  font-size: 12px;
-  color: #909399;
+  font-size: 13px;
+  color: #67c23a;
+  background-color: rgba(103, 194, 58, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-block;
 }
 
 .chart-section {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .chart-card {
-  height: 350px;
+  height: 380px;
   position: relative;
+  border-radius: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  transition: box-shadow 0.3s;
+}
+
+.chart-card:hover {
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1) !important;
 }
 
 .chart {
@@ -753,78 +643,43 @@ onMounted(async () => {
   left: 0;
   right: 0;
   bottom: 0;
-}
-
-.quick-actions {
-  height: 350px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-header h3 {
-  margin: 0;
-  font-size: 18px;
-  color: #303133;
-}
-
-.action-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  padding: 20px 0;
-}
-
-.action-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background-color: #f5f7fa;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.action-item:hover {
-  background-color: #ecf5ff;
-  transform: translateY(-3px);
-}
-
-.action-item svg {
-  font-size: 28px;
-  color: #409eff;
-  margin-bottom: 8px;
-}
-
-.action-item span {
-  font-size: 14px;
-  color: #606266;
-}
-
-.task-section {
-  margin-bottom: 20px;
+  padding: 16px;
 }
 
 .loading-container {
   padding: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  backdrop-filter: blur(5px);
 }
 
 .refresh-button {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  bottom: 30px;
+  right: 30px;
+  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4);
   z-index: 10;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #409eff 0%, #64b5f6 100%);
+  border: none;
+  transition: all 0.3s;
+}
+
+.refresh-button:hover {
+  transform: scale(1.1) rotate(30deg);
+  box-shadow: 0 10px 20px rgba(64, 158, 255, 0.5);
 }
 
 @media (max-width: 768px) {
-  .action-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .data-card {
+    margin-bottom: 16px;
+  }
+  
+  .chart-card {
+    margin-bottom: 16px;
+    height: 300px;
   }
 }
 
@@ -835,11 +690,22 @@ onMounted(async () => {
   }
   
   .welcome-message {
-    margin-top: 10px;
+    margin-top: 16px;
+    width: 100%;
   }
   
-  .action-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .data-card {
+    height: 100px;
+  }
+  
+  .data-icon {
+    width: 60px;
+    height: 60px;
+    margin-right: 12px;
+  }
+  
+  .data-value {
+    font-size: 22px;
   }
 }
 </style> 

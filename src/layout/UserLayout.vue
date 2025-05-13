@@ -17,7 +17,9 @@ import {
   Setting,
   Message,
   SwitchButton,
-  Lock
+  Lock,
+  Location,
+  Clock
 } from '@element-plus/icons-vue'
 
 // 获取用户信息和文件存储
@@ -83,10 +85,10 @@ const checkAuth = async () => {
 const userMenuItems = [
   { path: '/user/profile', name: '个人资料', icon: User },
   { path: '/user/orders', name: '我的订单', icon: List },
-  { path: '/user/address', name: '收货地址', icon: 'el-icon-location' },
+  { path: '/user/address', name: '收货地址', icon: Location },
   { path: '/user/favorites', name: '我的收藏', icon: Star },
   { path: '/user/reviews', name: '我的评价', icon: Message },
-  { path: '/user/behavior', name: '浏览历史', icon: 'el-icon-time' },
+  { path: '/user/behavior', name: '浏览历史', icon: Clock },
   { path: '/user/password', name: '修改密码', icon: Lock }
 ]
 

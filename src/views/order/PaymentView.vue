@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useOrderStore, PayType } from '@/stores/order'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { CreditCard } from '@element-plus/icons-vue'
+import QRCode from 'qrcode' // 使用更稳定的qrcode库
 
 // 获取路由和store
 const route = useRoute()
@@ -20,18 +21,19 @@ const order = ref(null)
 const selectedPayType = ref(PayType.ALIPAY) // 默认支付宝支付
 const showPayCode = ref(false)
 const paymentInfo = ref(null)
+const qrCodeUrl = ref('') // 二维码图片URL
 
 // 支付方式选项
 const payTypeOptions = [
   {
     value: PayType.ALIPAY,
     label: '支付宝',
-    icon: 'https://img.alicdn.com/imgextra/i4/O1CN01XWbS8B1aHiOs3OOM5_!!6000000003309-2-tps-200-64.png'
+    icon: 'https://www.alipay.com/favicon.ico'
   },
   {
     value: PayType.WECHAT,
     label: '微信支付',
-    icon: 'https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.png'
+    icon: 'https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico'
   }
 ]
 
@@ -72,6 +74,32 @@ const fetchOrderDetail = async () => {
   }
 }
 
+// 生成二维码
+const generateQRCode = async () => {
+  try {
+    // 构建支付信息
+    const payInfo = {
+      orderNo: orderNo.value,
+      amount: order.value.payAmount,
+      payType: selectedPayType.value,
+      timestamp: Date.now()
+    }
+    
+    // 使用qrcode库生成二维码URL
+    qrCodeUrl.value = await QRCode.toDataURL(JSON.stringify(payInfo), {
+      width: 200,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    })
+  } catch (error) {
+    console.error('生成二维码失败', error)
+    ElMessage.error('生成支付二维码失败')
+  }
+}
+
 // 提交支付
 const submitPayment = async () => {
   if (!selectedPayType.value) {
@@ -90,6 +118,11 @@ const submitPayment = async () => {
         ...result,
         tradeNo: 'mock_' + Date.now() // 添加模拟的交易号
       }
+      
+      // 生成二维码
+      await generateQRCode()
+      
+      // 显示二维码对话框
       showPayCode.value = true
       ElMessage.success('请扫描二维码完成支付')
     }
@@ -137,6 +170,7 @@ const simulatePaymentCompleted = async () => {
 const cancelPayment = () => {
   showPayCode.value = false
   paymentInfo.value = null
+  qrCodeUrl.value = ''
 }
 
 // 返回订单详情
@@ -284,20 +318,18 @@ onMounted(async () => {
           </div>
           
           <div class="qrcode-image">
-            <!-- 这里应该显示实际的支付二维码 -->
-            <div class="mock-qrcode">
-              <p>模拟支付二维码</p>
-              <div class="qr-placeholder">
-                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" 
-                     alt="支付二维码" 
-                     width="120" 
-                     height="120">
+            <!-- 二维码图片 -->
+            <div class="qrcode-container">
+              <img v-if="qrCodeUrl" :src="qrCodeUrl" alt="支付二维码" class="qrcode-img" />
+              <div v-else class="qrcode-loading">
+                <el-skeleton :rows="3" animated />
               </div>
             </div>
           </div>
           
           <div class="qrcode-footer">
             <p>请使用{{ getPayTypeName(selectedPayType) }}扫描二维码完成支付</p>
+            <p class="qrcode-order-no">订单号: {{ orderNo }}</p>
           </div>
         </div>
         
@@ -484,30 +516,38 @@ onMounted(async () => {
   margin-bottom: 20px;
 }
 
-.mock-qrcode {
+.qrcode-container {
   width: 200px;
   height: 200px;
   margin: 0 auto;
   border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #fff;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  border-radius: 8px;
 }
 
-.qr-placeholder {
-  width: 150px;
-  height: 150px;
-  background-color: #f5f7fa;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.qrcode-img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.qrcode-loading {
+  width: 100%;
+  padding: 20px;
 }
 
 .qrcode-footer {
   color: #666;
   font-size: 14px;
+}
+
+.qrcode-order-no {
+  margin-top: 5px;
+  color: #999;
+  font-size: 12px;
 }
 
 .dialog-footer {

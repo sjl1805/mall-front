@@ -244,7 +244,7 @@ onMounted(async () => {
           <el-radio-group v-model="orderForm.payType" class="payment-radio-group">
             <el-radio :label="PayType.ALIPAY" class="payment-radio">
               <div class="payment-item">
-                <img src="https://img.alicdn.com/imgextra/i4/O1CN01XWbS8B1aHiOs3OOM5_!!6000000003309-2-tps-200-64.png" 
+                <img src="https://www.alipay.com/favicon.ico"
                      alt="支付宝" 
                      class="payment-logo">
                 <span>支付宝</span>
@@ -253,7 +253,7 @@ onMounted(async () => {
             
             <el-radio :label="PayType.WECHAT" class="payment-radio">
               <div class="payment-item">
-                <img src="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.png" 
+                <img src="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico" 
                      alt="微信支付" 
                      class="payment-logo">
                 <span>微信支付</span>
