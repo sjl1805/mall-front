@@ -237,8 +237,8 @@ const routes = [
         meta: { title: '订单详情', requiresAuth: true, requiresAdmin: true }
       },
       {
-        path: 'recommendation',
-        name: 'admin-recommendation',
+        path: 'recommendations',
+        name: 'admin-recommendations',
         component: () => import('../views/admin/RecommendationManageView.vue'),
         meta: { title: '推荐管理', requiresAuth: true, requiresAdmin: true }
       }

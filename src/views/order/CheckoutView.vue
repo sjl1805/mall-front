@@ -229,39 +229,6 @@ onMounted(async () => {
         </div>
       </el-card>
       
-      <!-- 支付方式 -->
-      <el-card class="payment-section">
-        <template #header>
-          <div class="section-header">
-            <h2>
-              <el-icon><CreditCard /></el-icon>
-              支付方式
-            </h2>
-          </div>
-        </template>
-        
-        <div class="payment-options">
-          <el-radio-group v-model="orderForm.payType" class="payment-radio-group">
-            <el-radio :label="PayType.ALIPAY" class="payment-radio">
-              <div class="payment-item">
-                <img src="https://www.alipay.com/favicon.ico"
-                     alt="支付宝" 
-                     class="payment-logo">
-                <span>支付宝</span>
-              </div>
-            </el-radio>
-            
-            <el-radio :label="PayType.WECHAT" class="payment-radio">
-              <div class="payment-item">
-                <img src="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico" 
-                     alt="微信支付" 
-                     class="payment-logo">
-                <span>微信支付</span>
-              </div>
-            </el-radio>
-          </el-radio-group>
-        </div>
-      </el-card>
       
       <!-- 订单备注 -->
       <el-card class="note-section">

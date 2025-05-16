@@ -123,6 +123,7 @@ const submitForm = async () => {
         const res = await userStore.register({
           username: registerForm.username,
           password: registerForm.password,
+          confirmPassword: registerForm.confirmPassword,
           phone: registerForm.phone,
           email: registerForm.email,
           captcha: registerForm.captcha,
