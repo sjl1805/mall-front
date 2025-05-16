@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRecommendationStore } from '@/stores/recommendation'
+import { useRecommendationStore, RecommendationType } from '@/stores/recommendation'
 import { useUserStore } from '@/stores/user'
 import { useFileStore } from '@/stores/file'
 import { useRouter } from 'vue-router'
@@ -21,7 +21,7 @@ const pageSize = ref(24)
 // 是否强制刷新数据
 const forceRefresh = ref(false)
 
-// 加载推荐数据
+// 加载推荐数据（使用热门推荐）
 const loadRecommendations = async () => {
   if (loading.value) return; // 防止重复加载
   
@@ -32,7 +32,8 @@ const loadRecommendations = async () => {
   loading.value = true
 
   try {
-    const data = await recommendationStore.getRecommendations(pageSize.value, forceRefresh.value)
+    // 直接使用热门推荐
+    const data = await recommendationStore.getPopularRecommendations(pageSize.value, forceRefresh.value)
     recommendations.value = data
     forceRefresh.value = false
   } catch (error) {
@@ -68,8 +69,19 @@ const calculateDiscount = (price, originalPrice) => {
     return null
   }
   
-  const discount = Math.floor((1 - price / originalPrice) * 100)
-  return discount > 0 ? `${discount}折` : null
+  // 计算折扣率：当前价格 / 原价 = 折扣率
+  // 例如：8折表示原价的80%，即0.8 * 原价
+  const discountRate = (price / originalPrice) * 10
+  
+  // 四舍五入到一位小数
+  const roundedDiscount = Math.round(discountRate * 10) / 10
+  
+  // 如果是整数折(如8.0折)，则显示为"8折"
+  const formattedDiscount = roundedDiscount % 1 === 0 
+    ? `${roundedDiscount.toFixed(0)}折`
+    : `${roundedDiscount.toFixed(1)}折`
+    
+  return formattedDiscount
 }
 
 // 获取图片URL
@@ -113,7 +125,6 @@ onMounted(() => {
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h1 class="page-title">为您推荐</h1>
       <p class="page-desc" v-if="isLoggedIn">
         根据您的浏览历史和喜好，为您精选商品
       </p>
@@ -124,16 +135,17 @@ onMounted(() => {
       <div class="action-buttons">
         <el-button v-if="!isLoggedIn" type="primary" @click="goToLogin">立即登录</el-button>
         <el-button @click="refreshData" :loading="loading" :disabled="loading">
-          <i class="el-icon-refresh"></i> 刷新推荐
+          刷新推荐
         </el-button>
       </div>
     </div>
 
     <div class="recommendation-container">
+      <!-- 热门推荐视图 -->
       <div class="tab-content-container">
         <div class="tab-header">
-          <h2>综合推荐</h2>
-          <p>根据您的浏览和购买习惯，为您精选的商品</p>
+          <h2>推荐</h2>
+          <p>为您精选的热门商品</p>
         </div>
         
         <div v-if="loading" class="loading-container">

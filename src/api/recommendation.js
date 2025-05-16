@@ -98,9 +98,15 @@ export function getSimilarProductRecommendations(productId, limit = 5) {
  * 推荐类型常量
  */
 export const RecommendationType = {
-  HYBRID: 'hybrid',      // 混合推荐
-  USER_BASED: 'user-cf', // 基于用户的协同过滤
-  ITEM_BASED: 'item-cf', // 基于物品的协同过滤
-  POPULAR: 'popular',    // 热门推荐
-  CONTENT: 'content-based' // 基于内容的推荐
-} 
+  HYBRID: 4,      // 混合推荐
+  USER_BASED: 1,  // 基于用户的协同过滤
+  ITEM_BASED: 2,  // 基于物品的协同过滤
+  POPULAR: 3,     // 热门推荐
+  CONTENT: 5      // 基于内容的推荐
+}
+
+/**
+ * 修改记录：
+ * 1. 推荐类型常量从字符串改为数字，与后端保持一致
+ * 2. 添加了基于内容的推荐类型常量，值为5
+ */ 
